@@ -1,95 +1,98 @@
-# dsh-subagent-monitor
+<h1 align="center">🤖 dsh-subagent-monitor</h1>
 
-一个 **DeepSeek Harness (DSH)** Web 界面扩展插件：在侧栏底部提供「子代理」入口按钮，并在屏幕右上角常驻一个**运行中的子代理**实时监视面板。
+<p align="center">
+  DeepSeek Harness (DSH) Web 扩展插件 · 子代理实时运行监视面板
+  <br/>
+  <a href="https://github.com/Mombrane/dsh-subagent-monitor/blob/master/LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-green"></a>
+  <img alt="platform" src="https://img.shields.io/badge/platform-Web-8b5cf6">
+  <img alt="dsh" src="https://img.shields.io/badge/DSH-0.1.x-2563eb">
+</p>
 
-> 面板截图位（发布后补充截图）
+---
 
-## 功能
+## ✨ 是什么
 
-- **实时监视**：当前会话派生的每个子代理，以独立圆角卡片展示——运行中（🔵 脉动 + 秒表）、完成（🟢 + 耗时）、失败（🔴）、已打断（🟠）、令牌上限、已拒绝
-- **卡片化列表**：每个子代理一张卡片；任务名在标题行，「打开对话」按钮在右侧，状态与耗时在卡片第二行
-- **树形缩进**：子代理的子代理（孙代）卡片向右缩进
-- **打开对话**：一键跳转到该子代理的会话；进入子代理会话后，面板标题栏出现「← 主会话」返回按钮
-- **页面刷新自动恢复**：面板是常驻组合的一部分，刷新/重启后自动回来（不同于临时动态插件）
-- **移动端默认隐藏**：视口 ≤ 768px 时默认不弹出面板，侧栏按钮仍可手动打开
-- **历史回填**：服务重启后，之前创建的子代理（🟢/⚪）从持久目录回填显示
+在 DSH Web 界面侧栏底部加一个「子代理」入口，并在屏幕**右上角**常驻一块卡片式面板，实时展示当前会话派生的每一个子代理的运行状态。
 
-## 环境要求
-
-- DeepSeek Harness `0.1.x`（源码仓库或安装版均可）
-- Node.js 22+
-
-## 安装方式 A：DSH 源码仓库（推荐，完整流程已验证）
-
-1. 将本仓库的 `src/` 复制为 `<dsh>/packages/client/ui-subagent-monitor/`，并使用该目录下的
-   `package.json`、`tsconfig.json`、`tsdown.config.ts`
-2. 在 `<dsh>/packages/bundle/web-app/package.json` 的 dependencies 中加入：
-   ```json
-   "@mombrane/dsh-ui-subagent-monitor": "workspace:*"
-   ```
-3. 在 `<dsh>/packages/bundle/web-app/cordis.patch.yml` 的浏览器插件清单（`ui-subagent` 行之后）加入：
-   ```yaml
-   - id: ui-subagent-monitor
-     name: '@mombrane/dsh-ui-subagent-monitor'
-   ```
-4. 在 `<dsh>/tsconfig.client.json` 的 `references` 中加入：
-   ```json
-   { "path": "./packages/client/ui-subagent-monitor" }
-   ```
-5. 把包的 `tsdown.config.ts` 改为引用主仓预设（与兄弟包一致）：
-   ```ts
-   import { clientBundle } from '../tsdown.client.ts'
-   export default clientBundle('@mombrane/dsh-ui-subagent-monitor', ['lib/types/index.js'])
-   ```
-6. 执行：
-   ```bash
-   pnpm install
-   pnpm --filter @mombrane/dsh-ui-subagent-monitor bundle
-   ```
-7. 重启 `dsh web`，打开页面即可看到右上角面板。
-
-## 安装方式 B：npm 依赖 + patch 覆盖（安装版部署）
-
-本仓库随附预构建产物（`lib/index.js` 与 `lib/client.js`），可直接作为依赖安装：
-
-```bash
-npm install @mombrane/dsh-ui-subagent-monitor
+```
+┌─ 运行中的子代理 ──────────── [收起 ▴] [✕] ┐
+│ ┌─────────────────────────────────────┐ │
+│ │ 🔵 统计 ui 目录 TS 文件数   [打开对话] │ │
+│ │    one-shot · 1a2b3c4d   运行中 · 00:42 │ │
+│ └─────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────┐ │
+│ │ 🟢 演示子代理：统计文件类型  [打开对话] │ │
+│ │    spawn · 2b3c4d5e    完成 · 03:12  │ │
+│ └─────────────────────────────────────┘ │
+│  运行 1 · 完成 1 · 异常 0    [清空已完成] │
+└─────────────────────────────────────────┘
 ```
 
-然后在部署的 patch 覆盖层中加入组合行：
+<!-- 截图占位：运行中的面板实际截图 -->
+
+## 🎯 特性
+
+| 特性 | 说明 |
+| --- | --- |
+| 🟢 实时状态 | 运行中（🔵 蓝色呼吸 + 秒表）、完成、失败、已打断、令牌上限、已拒绝 |
+| 🃏 卡片化列表 | 每个子代理一张圆角卡片；「打开对话」在右侧，状态与耗时在第二行 |
+| 🌲 树形缩进 | 孙代子代理卡片向右缩进 |
+| 🔙 一键返回 | 进入子代理会话后，面板出现「← 主会话」按钮 |
+| 🔄 刷新自恢复 | 常驻组合，页面刷新 / 服务重启后自动恢复 |
+| 📱 移动端友好 | ≤768px 视口默认不弹出，侧栏按钮仍可手动打开 |
+
+## 📦 安装
+
+### 方式 A · DSH 源码仓库（推荐）
+
+```bash
+# 1. 复制本仓库 src/ 为 <dsh>/packages/client/ui-subagent-monitor/
+# 2. <dsh>/packages/bundle/web-app/package.json 加依赖
+"@mombrane/dsh-ui-subagent-monitor": "workspace:*"
+```
 
 ```yaml
+# 3. <dsh>/packages/bundle/web-app/cordis.patch.yml（ui-subagent 行之后）
 - id: ui-subagent-monitor
   name: '@mombrane/dsh-ui-subagent-monitor'
 ```
 
-重启 `dsh web`。注意：模块扫描以 web 组合的依赖图为准，若部署结构与此不符，
-请回退到方式 A。
-
-## 本仓库构建
-
 ```bash
-npm install        # 需要能解析 @deepseek-ai/* 平台包（DSH 仓库的 node_modules 即可）
-npm run typecheck
-npm run build      # 产出 lib/index.js（Node 半身）与 lib/client.js（浏览器 bundle）
+# 4. 构建 + 重启
+pnpm install && pnpm --filter @mombrane/dsh-ui-subagent-monitor bundle
+# 重启 dsh web
 ```
 
-## FAQ
+> 还需在 `<dsh>/tsconfig.client.json` 的 `references` 中加入本包路径，并将本包
+> `tsdown.config.ts` 改为引用主仓预设（`import { clientBundle } from '../tsdown.client.ts'`）。
 
-**刷新页面后面板会消失吗？**
-不会。面板是组合中的常驻行，页面每次加载都会重新挂载；数据由 Node 半身的路由提供。
+### 方式 B · npm 依赖 + patch
 
-**「已结束」和「完成」有什么区别？**
-🟢 完成：面板实时观测到该子代理成功结束；⚪ 已结束：该子代理是服务重启前创建的历史记录，面板未观测到结局（成功与否未知）。
+```bash
+npm install @mombrane/dsh-ui-subagent-monitor   # 随附预构建 lib/
+```
 
-**面板数据从哪来？**
-Node 半身监听 `subagent/start` / `subagent/end` 事件（按父会话链归因到当前会话），
-并与 `subagents.listDescendants` 的持久目录合并。每会话最多保留 200 条记录。
+在部署 patch 层加入同一组合行后重启 `dsh web`。
 
-**安全说明**
-面板轮询的 `/api/subagent-monitor/snapshot` 路由是面向回环地址的开发工具接口，
-不做鉴权；仅建议在本地/内网部署使用。
+## 🏷️ 状态图例
 
-## License
+| 状态 | 含义 |
+| --- | --- |
+| 🔵 运行中 | 正在执行，蓝色呼吸 + 实时秒表 |
+| 🟢 完成 | 面板实时见证其成功结束，显示耗时 |
+| ⚪ 已结束 | 历史回填行：服务重启前创建，结局未观测（成功/失败未知） |
+| 🔴 失败 / 🟠 已打断 | 错误结束 / 被中止 |
 
-[MIT](./LICENSE)
+## ❓ FAQ
+
+**刷新页面会消失吗？** 不会。面板是组合中的常驻行，页面每次加载自动恢复。
+
+**「完成」和「已结束」有什么区别？** 🟢 是面板实时观测到的成功结局；⚪ 是服务重启前的历史记录，结局未观测。
+
+**面板有多大的容量？** 每会话最多保留 200 条，超出淘汰最旧的已结束行。
+
+**安全吗？** 轮询路由 `/api/subagent-monitor/snapshot` 面向回环地址、无鉴权，仅建议本地/内网使用。
+
+## 📄 License
+
+[MIT](./LICENSE) © Mombrane
