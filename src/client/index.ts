@@ -72,8 +72,20 @@ export function apply(ctx: ClientContext): void {
 }
 .smn-row-main { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .smn-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-.smn-dot-running { background: var(--dsw-alias-brand-primary, #2563eb); animation: smn-pulse 1.2s ease-in-out infinite; }
-@keyframes smn-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+.smn-dot-running {
+  background: var(--dsw-static-deepseek-500, rgb(65, 118, 230));
+  animation: smn-pulse 1.2s ease-in-out infinite;
+}
+@keyframes smn-pulse {
+  0%, 100% {
+    background: var(--dsw-static-deepseek-500, rgb(65, 118, 230));
+    box-shadow: 0 0 0 0 rgba(65, 118, 230, 0.45);
+  }
+  50% {
+    background: var(--dsw-static-deepseek-200, rgb(211, 226, 255));
+    box-shadow: 0 0 0 4px rgba(65, 118, 230, 0);
+  }
+}
 .smn-dot-ok { background: var(--dsw-alias-state-success-primary, #16a34a); }
 .smn-dot-error { background: var(--dsw-alias-state-error-primary, #dc2626); }
 .smn-dot-warn { background: var(--dsw-alias-state-warn-primary, #d97706); }
