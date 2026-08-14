@@ -1,0 +1,59 @@
+{
+  "name": "@mombrane/dsh-ui-subagent-monitor",
+  "description": "DSH web extension: a live subagent run monitor with a sidebar trigger and a floating card panel",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/types/**/*.d.ts",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "react": "^18.2.0"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=0.1.0",
+    "@deepseek-ai/dsh-client-runtime": ">=0.1.0",
+    "@deepseek-ai/dsh-client-ui-layout": ">=0.1.0",
+    "@deepseek-ai/dsh-client-ui-sidebar": ">=0.1.0",
+    "@deepseek-ai/dsh-client-ui-slots": ">=0.1.0",
+    "@deepseek-ai/dsh-host-webserver": ">=0.1.0",
+    "@deepseek-ai/dsh-session": ">=0.1.0",
+    "@deepseek-ai/dsh-subagent": ">=0.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "tsdown": "^0.22.0",
+    "typescript": "^6.0.0"
+  }
+}
