@@ -8,7 +8,7 @@
  */
 import { defineConfig, type UserConfig } from 'tsdown'
 
-const ID = '@mombrane/dsh-ui-subagent-monitor'
+const ID = '@leetoners/dsh-ui-subagent-monitor'
 
 /** Platform modules the DSH web loader answers at runtime: they must stay external. */
 const PLATFORM_MODULES = [

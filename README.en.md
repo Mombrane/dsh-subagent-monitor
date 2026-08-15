@@ -55,10 +55,10 @@ dsh plugin --profile <your-profile> add github:Mombrane/dsh-subagent-monitor
 ### Option B · npm (coming soon)
 
 ```bash
-dsh plugin --profile <your-profile> add @mombrane/dsh-ui-subagent-monitor
+dsh plugin --profile <your-profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
-> `@mombrane/dsh-ui-subagent-monitor` is not published to the npm registry yet; one-line install once published.
+> `@leetoners/dsh-ui-subagent-monitor` is not published to the npm registry yet; one-line install once published.
 
 Restart `dsh web` to take effect. This repository is both a **DSH client plugin** (`dsh.client`) and a **composition bundle** (`dsh.bundle` + `cordis.patch.yml`), shipped with a prebuilt `lib/`.
 
@@ -67,18 +67,18 @@ Restart `dsh web` to take effect. This repository is both a **DSH client plugin*
 ```bash
 # 1. Copy this repo's src/ to <dsh>/packages/client/ui-subagent-monitor/
 # 2. Add the dependency to <dsh>/packages/bundle/web-app/package.json
-"@mombrane/dsh-ui-subagent-monitor": "workspace:*"
+"@leetoners/dsh-ui-subagent-monitor": "workspace:*"
 ```
 
 ```yaml
 # 3. <dsh>/packages/bundle/web-app/cordis.patch.yml (after the ui-subagent row)
 - id: ui-subagent-monitor
-  name: '@mombrane/dsh-ui-subagent-monitor'
+  name: '@leetoners/dsh-ui-subagent-monitor'
 ```
 
 ```bash
 # 4. Build + restart
-pnpm install && pnpm --filter @mombrane/dsh-ui-subagent-monitor bundle
+pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 # restart dsh web
 ```
 

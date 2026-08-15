@@ -1,6 +1,6 @@
 # Changelog
 
-本文件记录 `@mombrane/dsh-ui-subagent-monitor` 所有值得记录的变更。
+本文件记录 `@leetoners/dsh-ui-subagent-monitor` 所有值得记录的变更。
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
 ## [Unreleased]
@@ -12,6 +12,10 @@
 - 文档门禁 `scripts/verify-docs.mjs` + GitHub Actions（版本 / CHANGELOG 一致、双语配对、相对链接检查）。
 - PR 模板（`.github/PULL_REQUEST_TEMPLATE.md`）：文档同步 checklist。
 - npm 发布流水线（`.github/workflows/publish.yml`）：tag 推送自动发布 + provenance。
+
+### Changed
+
+- npm 发布 scope 由 `@mombrane` 改为 `@leetoners`（发布组织 leetoners）。
 
 ### Fixed
 

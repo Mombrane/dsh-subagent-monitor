@@ -85,7 +85,7 @@ DSH 支持两种扩展：动态 Cordis 插件（`cordis_define`/`cordis_run`）�
 
 ### 2.7 为什么发布时改中立包名 + 补 `dsh.bundle`
 
-- 包名 `@mombrane/dsh-ui-subagent-monitor`，不占用 DeepSeek 官方
+- 包名 `@leetoners/dsh-ui-subagent-monitor`，不占用 DeepSeek 官方
   `@deepseek-ai/*` 命名空间；
 - 官方文档判定“可安装插件”的标准是包内带 `dsh.bundle`（含
   `cordis.patch.yml`）；只声明 `dsh.client` 的包会在安装时被拒。
@@ -95,7 +95,7 @@ DSH 支持两种扩展：动态 Cordis 插件（`cordis_define`/`cordis_run`）�
 ```yaml
 - insert:
     - id: ui-subagent-monitor
-      name: '@mombrane/dsh-ui-subagent-monitor'
+      name: '@leetoners/dsh-ui-subagent-monitor'
 ```
 
 ---
@@ -207,8 +207,8 @@ dsh-subagent-monitor/
 ### 5.2 工程化
 
 - GitHub Actions CI（typecheck + build 自动验证 PR）；
-- npm 发布 `@mombrane/dsh-ui-subagent-monitor`，支持
-  `dsh plugin add @mombrane/dsh-ui-subagent-monitor` 一行安装；
+- npm 发布 `@leetoners/dsh-ui-subagent-monitor`，支持
+  `dsh plugin add @leetoners/dsh-ui-subagent-monitor` 一行安装；
 - README 截图替换占位。
 
 ### 5.3 生态收录

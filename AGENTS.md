@@ -1,6 +1,6 @@
 # AGENTS.md
 
-本仓库是 `@mombrane/dsh-ui-subagent-monitor`（DeepSeek Harness Web 扩展插件）的**发布副本**；DSH monorepo 内的 `packages/client/ui-subagent-monitor` 是开发源，两者需手工同步（见 ARCHITECTURE.md §4）。
+本仓库是 `@leetoners/dsh-ui-subagent-monitor`（DeepSeek Harness Web 扩展插件）的**发布副本**；DSH monorepo 内的 `packages/client/ui-subagent-monitor` 是开发源，两者需手工同步（见 ARCHITECTURE.md §4）。
 
 ## 仓库布局
 

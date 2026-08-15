@@ -3,4 +3,4 @@
 # configuration; later layers may override them by id.
 - insert:
     - id: ui-subagent-monitor
-      name: '@mombrane/dsh-ui-subagent-monitor'
+      name: '@leetoners/dsh-ui-subagent-monitor'

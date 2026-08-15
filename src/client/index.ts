@@ -16,7 +16,7 @@ export function apply(ctx: ClientContext): void {
 
   ctx.effect(() => {
     const tag = document.createElement('style')
-    tag.dataset.plugin = '@mombrane/dsh-ui-subagent-monitor'
+    tag.dataset.plugin = '@leetoners/dsh-ui-subagent-monitor'
     tag.textContent = `
 .smn-trigger {
   display: inline-flex; align-items: center; gap: 6px;

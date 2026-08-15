@@ -55,10 +55,10 @@ dsh plugin --profile <你的profile> add github:Mombrane/dsh-subagent-monitor
 ### 方式 B · npm 安装（即将发布）
 
 ```bash
-dsh plugin --profile <你的profile> add @mombrane/dsh-ui-subagent-monitor
+dsh plugin --profile <你的profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
-> `@mombrane/dsh-ui-subagent-monitor` 尚未发布到 npm registry，发布后即可一行安装。
+> `@leetoners/dsh-ui-subagent-monitor` 尚未发布到 npm registry，发布后即可一行安装。
 
 重启 `dsh web` 即生效。本仓库同时是 **DSH 客户端插件**（`dsh.client`）与 **组合 bundle**（`dsh.bundle` + `cordis.patch.yml`），并随附预构建 `lib/`。
 
@@ -67,18 +67,18 @@ dsh plugin --profile <你的profile> add @mombrane/dsh-ui-subagent-monitor
 ```bash
 # 1. 复制本仓库 src/ 为 <dsh>/packages/client/ui-subagent-monitor/
 # 2. <dsh>/packages/bundle/web-app/package.json 加依赖
-"@mombrane/dsh-ui-subagent-monitor": "workspace:*"
+"@leetoners/dsh-ui-subagent-monitor": "workspace:*"
 ```
 
 ```yaml
 # 3. <dsh>/packages/bundle/web-app/cordis.patch.yml（ui-subagent 行之后）
 - id: ui-subagent-monitor
-  name: '@mombrane/dsh-ui-subagent-monitor'
+  name: '@leetoners/dsh-ui-subagent-monitor'
 ```
 
 ```bash
 # 4. 构建 + 重启
-pnpm install && pnpm --filter @mombrane/dsh-ui-subagent-monitor bundle
+pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 # 重启 dsh web
 ```
 
