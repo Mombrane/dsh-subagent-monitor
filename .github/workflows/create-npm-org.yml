@@ -4,6 +4,10 @@ name: create-npm-org
 # 手动触发一次即可；成功后本 workflow 可从仓库删除。
 on:
   workflow_dispatch:
+    inputs:
+      username:
+        description: '你的 npm 用户名（将成为 org owner）'
+        required: true
 
 permissions:
   contents: read
@@ -19,12 +23,21 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
-      - name: Create @mombrane org and add self as owner
+      - name: Diagnose token
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          ME="$(npm whoami)"
-          echo "authenticated npm user: ${ME}"
-          npm org add mombrane "${ME}"
+          if npm whoami; then
+            echo "::notice::token auth OK"
+          else
+            echo "::error::NPM_TOKEN 认证失败：请重新生成 Automation token 并更新 Secret"
+            exit 1
+          fi
+
+      - name: Create @mombrane org and add owner
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm org add mombrane "${{ github.event.inputs.username }}"
           echo "--- org members after creation ---"
           npm org ls mombrane
