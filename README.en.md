@@ -111,7 +111,7 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 | --- | --- |
 | GitHub topics | `dsh-plugin`, `deepseek-harness` (auto-synced by Oh-My-DSH every 4 hours) |
 | Oh-My-DSH catalog | PR [#8](https://github.com/like-study1/Oh-My-DSH/pull/8) pending maintainer merge |
-| awesome-dsh-plugin | PR [#675](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/675) pending maintainer merge |
+| awesome-dsh-plugin | ✅ Listed (commit `c7ad36e9`, PR [#675](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/675) merged) |
 
 ## 📋 Changelog
 
