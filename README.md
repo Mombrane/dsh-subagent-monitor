@@ -43,7 +43,17 @@
 
 ## 📦 安装
 
-### 方式 A · DSH 源码仓库（推荐）
+### 方式 A · 官方 CLI（推荐，一行命令）
+
+```bash
+dsh plugin --profile <你的profile> add @mombrane/dsh-ui-subagent-monitor
+# 或从 GitHub 直装（需按提示在 profile 的 pnpm-workspace.yaml 中允许构建）
+dsh plugin --profile <你的profile> add github:Mombrane/dsh-subagent-monitor
+```
+
+重启 `dsh web` 即生效。本仓库同时是 **DSH 客户端插件**（`dsh.client`）与 **组合 bundle**（`dsh.bundle` + `cordis.patch.yml`），并随附预构建 `lib/`。
+
+### 方式 B · DSH 源码仓库内联（适合二次开发）
 
 ```bash
 # 1. 复制本仓库 src/ 为 <dsh>/packages/client/ui-subagent-monitor/
@@ -65,14 +75,6 @@ pnpm install && pnpm --filter @mombrane/dsh-ui-subagent-monitor bundle
 
 > 还需在 `<dsh>/tsconfig.client.json` 的 `references` 中加入本包路径，并将本包
 > `tsdown.config.ts` 改为引用主仓预设（`import { clientBundle } from '../tsdown.client.ts'`）。
-
-### 方式 B · npm 依赖 + patch
-
-```bash
-npm install @mombrane/dsh-ui-subagent-monitor   # 随附预构建 lib/
-```
-
-在部署 patch 层加入同一组合行后重启 `dsh web`。
 
 ## 🏷️ 状态图例
 

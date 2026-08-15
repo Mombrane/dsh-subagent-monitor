@@ -1,0 +1,6 @@
+# The dsh-ui-subagent-monitor bundle layer: applied when a profile lists this
+# package as a bundle (dsh plugin add ...). Rows insert into the composed
+# configuration; later layers may override them by id.
+- insert:
+    - id: ui-subagent-monitor
+      name: '@mombrane/dsh-ui-subagent-monitor'
