@@ -95,6 +95,11 @@ pnpm install && pnpm --filter @mombrane/dsh-ui-subagent-monitor bundle
 
 **安全吗？** 轮询路由 `/api/subagent-monitor/snapshot` 面向回环地址、无鉴权，仅建议本地/内网使用。
 
+## 📖 架构文档
+
+设计决策（为什么常驻、为什么自建轮询路由、事件归因模型）与数据流细节见
+[ARCHITECTURE.md](./ARCHITECTURE.md)。
+
 ## 📄 License
 
 [MIT](./LICENSE) © Mombrane
