@@ -1,0 +1,42 @@
+name: publish
+
+# 发布触发：向 master 推送 v* 标签（如 v0.1.0）
+# 需要仓库 Secrets 中配置 NPM_TOKEN（npm 的 Automation/CI token，发布者账号即包名 scope 归属账号）
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write # npm provenance：把发布产物与 Mombrane/dsh-subagent-monitor 仓库绑定
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org # 显式官方 registry，与本机/内网镜像无关
+
+      - name: Install build tooling
+        run: npm install
+
+      - name: Gate (docs / typecheck / tag-version consistency)
+        run: |
+          node scripts/verify-docs.mjs
+          npm run typecheck
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::tag v${TAG_VERSION} does not match package.json version ${PKG_VERSION}"
+            exit 1
+          fi
+
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
