@@ -43,17 +43,24 @@
 
 ## 📦 安装
 
-### 方式 A · 官方 CLI（推荐，一行命令）
+### 方式 A · GitHub 直装（当前可用）
+
+```bash
+dsh plugin --profile <你的profile> add github:Mombrane/dsh-subagent-monitor
+# 首次安装若提示允许构建脚本，按提示在 profile 的 pnpm-workspace.yaml 中确认即可
+```
+
+### 方式 B · npm 安装（即将发布）
 
 ```bash
 dsh plugin --profile <你的profile> add @mombrane/dsh-ui-subagent-monitor
-# 或从 GitHub 直装（需按提示在 profile 的 pnpm-workspace.yaml 中允许构建）
-dsh plugin --profile <你的profile> add github:Mombrane/dsh-subagent-monitor
 ```
+
+> `@mombrane/dsh-ui-subagent-monitor` 尚未发布到 npm registry，发布后即可一行安装。
 
 重启 `dsh web` 即生效。本仓库同时是 **DSH 客户端插件**（`dsh.client`）与 **组合 bundle**（`dsh.bundle` + `cordis.patch.yml`），并随附预构建 `lib/`。
 
-### 方式 B · DSH 源码仓库内联（适合二次开发）
+### 方式 C · DSH 源码仓库内联（适合二次开发）
 
 ```bash
 # 1. 复制本仓库 src/ 为 <dsh>/packages/client/ui-subagent-monitor/
@@ -83,7 +90,8 @@ pnpm install && pnpm --filter @mombrane/dsh-ui-subagent-monitor bundle
 | 🔵 运行中 | 正在执行，蓝色呼吸 + 实时秒表 |
 | 🟢 完成 | 面板实时见证其成功结束，显示耗时 |
 | ⚪ 已结束 | 历史回填行：服务重启前创建，结局未观测（成功/失败未知） |
-| 🔴 失败 / 🟠 已打断 | 错误结束 / 被中止 |
+| 🔴 失败 | 错误结束 |
+| 🟠 已打断 / 令牌上限 / 已拒绝 | 被中止 / 达到 token 上限 / 请求被拒绝 |
 
 ## ❓ FAQ
 
@@ -94,6 +102,18 @@ pnpm install && pnpm --filter @mombrane/dsh-ui-subagent-monitor bundle
 **面板有多大的容量？** 每会话最多保留 200 条，超出淘汰最旧的已结束行。
 
 **安全吗？** 轮询路由 `/api/subagent-monitor/snapshot` 面向回环地址、无鉴权，仅建议本地/内网使用。
+
+## 🌐 生态收录
+
+| 渠道 | 状态 |
+| --- | --- |
+| GitHub topics | `dsh-plugin`、`deepseek-harness`（Oh-My-DSH 每 4 小时自动同步） |
+| Oh-My-DSH 插件目录 | PR [#8](https://github.com/like-study1/Oh-My-DSH/pull/8) 待维护者合并 |
+| awesome-dsh-plugin | PR [#675](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/675) 待维护者合并 |
+
+## 📋 更新记录
+
+- **v1.0.0**：初版发布 —— 卡片化实时面板、树形缩进、会话跳转与一键返回、刷新自恢复、移动端策略、`dsh.bundle` 官方安装通道。
 
 ## 📖 架构文档
 
