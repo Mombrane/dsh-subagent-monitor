@@ -11,6 +11,11 @@
 - `README.en.md`：英文 README，与中文版双语配对。
 - 文档门禁 `scripts/verify-docs.mjs` + GitHub Actions（版本 / CHANGELOG 一致、双语配对、相对链接检查）。
 - PR 模板（`.github/PULL_REQUEST_TEMPLATE.md`）：文档同步 checklist。
+- npm 发布流水线（`.github/workflows/publish.yml`）：tag 推送自动发布 + provenance。
+
+### Fixed
+
+- `peerDependencies` 中 DSH 包版本范围放宽至 `>=0.1.0-rc.0`（公共 npm registry 目前仅有 rc 预发布版，原 `>=0.1.0` 无法解析）。
 
 ## [0.1.0] - 2026-08-15
 
