@@ -45,20 +45,20 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 
 ## 📦 Installation
 
-### Option A · Install from GitHub (works now)
-
-```bash
-dsh plugin --profile <your-profile> add github:Mombrane/dsh-subagent-monitor
-# On first install, if prompted to allow build scripts, confirm in the profile's pnpm-workspace.yaml
-```
-
-### Option B · npm (coming soon)
+### Option A · npm (recommended, one line)
 
 ```bash
 dsh plugin --profile <your-profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
-> `@leetoners/dsh-ui-subagent-monitor` is not published to the npm registry yet; one-line install once published.
+> ✅ Published as `v0.1.0` (built and signed by GitHub Actions; SLSA provenance verifiable).
+
+### Option B · Install from GitHub
+
+```bash
+dsh plugin --profile <your-profile> add github:Mombrane/dsh-subagent-monitor
+# On first install, if prompted to allow build scripts, confirm in the profile's pnpm-workspace.yaml
+```
 
 Restart `dsh web` to take effect. This repository is both a **DSH client plugin** (`dsh.client`) and a **composition bundle** (`dsh.bundle` + `cordis.patch.yml`), shipped with a prebuilt `lib/`.
 

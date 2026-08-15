@@ -206,9 +206,10 @@ dsh-subagent-monitor/
 
 ### 5.2 工程化
 
-- GitHub Actions CI（typecheck + build 自动验证 PR）；
-- npm 发布 `@leetoners/dsh-ui-subagent-monitor`，支持
+- ✅ npm 发布 `@leetoners/dsh-ui-subagent-monitor`：v0.1.0 已上线（2026-08，
+  GitHub Actions tag 触发 + SLSA provenance），
   `dsh plugin add @leetoners/dsh-ui-subagent-monitor` 一行安装；
+- GitHub Actions CI（typecheck + build 自动验证 PR）；
 - README 截图替换占位。
 
 ### 5.3 生态收录

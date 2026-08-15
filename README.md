@@ -45,20 +45,20 @@
 
 ## 📦 安装
 
-### 方式 A · GitHub 直装（当前可用）
-
-```bash
-dsh plugin --profile <你的profile> add github:Mombrane/dsh-subagent-monitor
-# 首次安装若提示允许构建脚本，按提示在 profile 的 pnpm-workspace.yaml 中确认即可
-```
-
-### 方式 B · npm 安装（即将发布）
+### 方式 A · npm 安装（推荐，一行命令）
 
 ```bash
 dsh plugin --profile <你的profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
-> `@leetoners/dsh-ui-subagent-monitor` 尚未发布到 npm registry，发布后即可一行安装。
+> ✅ 已发布 `v0.1.0`（GitHub Actions 构建并签名，SLSA provenance 可验）。
+
+### 方式 B · GitHub 直装
+
+```bash
+dsh plugin --profile <你的profile> add github:Mombrane/dsh-subagent-monitor
+# 首次安装若提示允许构建脚本，按提示在 profile 的 pnpm-workspace.yaml 中确认即可
+```
 
 重启 `dsh web` 即生效。本仓库同时是 **DSH 客户端插件**（`dsh.client`）与 **组合 bundle**（`dsh.bundle` + `cordis.patch.yml`），并随附预构建 `lib/`。
 
