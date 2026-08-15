@@ -6,6 +6,14 @@
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Mombrane/dsh-subagent-monitor.git"
+  },
+  "homepage": "https://github.com/Mombrane/dsh-subagent-monitor#readme",
+  "bugs": {
+    "url": "https://github.com/Mombrane/dsh-subagent-monitor/issues"
+  },
   "exports": {
     ".": {
       "types": "./lib/types/index.d.ts",
@@ -32,7 +40,8 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "verify:docs": "node scripts/verify-docs.mjs"
   },
   "files": [
     "lib/index.js",
@@ -41,6 +50,7 @@
     "cordis.patch.yml",
     "src",
     "README.md",
+    "README.en.md",
     "LICENSE"
   ],
   "dependencies": {

@@ -8,6 +8,8 @@
   <img alt="dsh" src="https://img.shields.io/badge/DSH-0.1.x-2563eb">
 </p>
 
+**中文** | [English](README.en.md)
+
 ---
 
 ## ✨ 是什么
@@ -113,7 +115,9 @@ pnpm install && pnpm --filter @mombrane/dsh-ui-subagent-monitor bundle
 
 ## 📋 更新记录
 
-- **v1.0.0**：初版发布 —— 卡片化实时面板、树形缩进、会话跳转与一键返回、刷新自恢复、移动端策略、`dsh.bundle` 官方安装通道。
+变更历史见 [CHANGELOG.md](./CHANGELOG.md)。当前版本 **0.1.0**（与 `package.json` 对齐）。
+
+- **v0.1.0**：初版发布 —— 卡片化实时面板、树形缩进、会话跳转与一键返回、刷新自恢复、移动端策略、`dsh.bundle` 官方安装通道。
 
 ## 📖 架构文档
 

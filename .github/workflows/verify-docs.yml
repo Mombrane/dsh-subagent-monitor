@@ -1,0 +1,22 @@
+name: verify-docs
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Verify docs (version / bilingual pairing / links)
+        run: |
+          CHANGED=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="origin/${{ github.event.pull_request.base.ref }}"
+            CHANGED="$(git diff --name-only "$BASE"...HEAD || true)"
+          fi
+          node scripts/verify-docs.mjs --changed "$CHANGED"

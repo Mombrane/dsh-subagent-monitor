@@ -2,6 +2,9 @@
 
 > 本文回答三个问题：**它是什么、为什么这么做、它是怎么运转的**。
 > 面向对象：想要理解、修改或二次分发本插件的开发者。
+>
+> **决策状态约定**：本文的设计决策被后续变更取代时，保留原文，在小节标题后标注
+> `（已被 §x.x 取代，YYYY-MM-DD）`，并把新决策写入对应小节；本文件与行为/架构变更同 PR 更新。
 
 ---
 
@@ -152,8 +155,13 @@ dsh-subagent-monitor/
 ├── tsconfig.json
 ├── tsdown.config.ts        # 自包含构建：内联平台模块与模块加载器
 ├── lib/                    # 预构建产物（index.js / client.js）
-├── README.md
+├── README.md               # 对外契约（中文）
+├── README.en.md            # 对外契约（英文，与中文版配对同步）
+├── CHANGELOG.md            # 变更史（与 package.json 版本对齐）
+├── AGENTS.md               # 仓库常驻规则（agent / 协作者）
 ├── ARCHITECTURE.md         # 本文档
+├── scripts/verify-docs.mjs # 文档门禁（版本 / 双语 / 链接）
+├── .github/                # PR 模板 + verify-docs CI
 └── LICENSE                 # MIT
 ```
 
