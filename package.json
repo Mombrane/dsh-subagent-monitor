@@ -51,7 +51,8 @@
     "src",
     "README.md",
     "README.en.md",
-    "LICENSE"
+    "LICENSE",
+    "docs"
   ],
   "dependencies": {
     "react": "^18.2.0"

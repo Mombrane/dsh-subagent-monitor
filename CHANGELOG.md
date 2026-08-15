@@ -11,6 +11,7 @@
 - `README.en.md`：英文 README，与中文版双语配对。
 - 文档门禁 `scripts/verify-docs.mjs` + GitHub Actions（版本 / CHANGELOG 一致、双语配对、相对链接检查）。
 - PR 模板（`.github/PULL_REQUEST_TEMPLATE.md`）：文档同步 checklist。
+- README 面板截图（`docs/screenshot.png`，中英双语）。
 - npm 发布流水线（`.github/workflows/publish.yml`）：tag 推送自动发布 + provenance。
 
 ### Changed
@@ -20,6 +21,8 @@
 ### Fixed
 
 - `peerDependencies` 中 DSH 包版本范围放宽至 `>=0.1.0-rc.0`（公共 npm registry 目前仅有 rc 预发布版，原 `>=0.1.0` 无法解析）。
+- 重建陈旧 `lib/` 产物：包名迁移至 `@leetoners` 后未重新构建，仓库内 `lib/client.js` 仍含旧 scope；已重构建并对齐（npm tarball 不受影响，发布流水线有 `prepare` 重建）。
+- 文档门禁新增 `lib/` 新鲜度检查（产物须包含当前包名）。
 
 ## [0.1.0] - 2026-08-15
 

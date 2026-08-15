@@ -79,9 +79,20 @@ for (const file of SCANNED) {
   }
 }
 
+// --- 4. lib freshness (committed bundle must match the current package id) -----
+const libClient = join(ROOT, 'lib', 'client.js')
+if (existsSync(libClient)) {
+  const bundle = readFileSync(libClient, 'utf8')
+  if (!bundle.includes(pkg.name)) {
+    fail(`lib/client.js is stale (does not contain "${pkg.name}"): run \`npm run build\` and commit lib/`)
+  }
+} else {
+  fail('lib/client.js is missing: run `npm run build` before committing')
+}
+
 // --- report -------------------------------------------------------------------
 if (errors.length === 0) {
-  console.log('verify-docs: OK (version / bilingual pairing / links)')
+  console.log('verify-docs: OK (version / bilingual pairing / links / lib freshness)')
   process.exit(0)
 }
 console.error('verify-docs: violations found:')

@@ -23,14 +23,14 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 │ │    one-shot · 1a2b3c4d    running · 00:42     │ │
 │ └───────────────────────────────────────────────┘ │
 │ ┌───────────────────────────────────────────────┐ │
-│ │ 🟢 Demo subagent: count file types[Open chat] │ │
+│ │ 🟢 Demo subagent: count file types [Open chat] │ │
 │ │    spawn · 2b3c4d5e       done · 03:12        │ │
 │ └───────────────────────────────────────────────┘ │
 │  running 1 · done 1 · failed 0     [Clear done]  │
 └───────────────────────────────────────────────────┘
 ```
 
-<!-- Screenshot placeholder: actual panel screenshot -->
+![Subagent monitor panel (running + done statuses)](docs/screenshot.png)
 
 ## 🎯 Features
 

@@ -31,4 +31,4 @@ pnpm verify:docs # 文档门禁（本地跑一遍再提交）
 ## 门禁
 
 `.github/workflows/verify-docs.yml` 在 PR 与 master 推送时运行 `scripts/verify-docs.mjs`：
-CHANGELOG 版本与 `package.json` 一致、README 双语配对、相对链接有效性。
+CHANGELOG 版本与 `package.json` 一致、README 双语配对、相对链接有效性、`lib/` 产物与当前包名一致（防陈旧构建）。

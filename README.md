@@ -30,7 +30,7 @@
 └─────────────────────────────────────────┘
 ```
 
-<!-- 截图占位：运行中的面板实际截图 -->
+![运行中的子代理面板（运行中 / 已完成多状态同屏）](docs/screenshot.png)
 
 ## 🎯 特性
 
@@ -48,7 +48,7 @@
 ### 方式 A · npm 安装（推荐，一行命令）
 
 ```bash
-dsh plugin --profile <你的profile> add @leetoners/dsh-ui-subagent-monitor
+dsh plugin --profile <your-profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
 > ✅ 已发布 `v0.1.0`（GitHub Actions 构建并签名，SLSA provenance 可验）。
@@ -56,7 +56,7 @@ dsh plugin --profile <你的profile> add @leetoners/dsh-ui-subagent-monitor
 ### 方式 B · GitHub 直装
 
 ```bash
-dsh plugin --profile <你的profile> add github:Mombrane/dsh-subagent-monitor
+dsh plugin --profile <your-profile> add github:Mombrane/dsh-subagent-monitor
 # 首次安装若提示允许构建脚本，按提示在 profile 的 pnpm-workspace.yaml 中确认即可
 ```
 
@@ -101,7 +101,7 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 
 **「完成」和「已结束」有什么区别？** 🟢 是面板实时观测到的成功结局；⚪ 是服务重启前的历史记录，结局未观测。
 
-**面板有多大的容量？** 每会话最多保留 200 条，超出淘汰最旧的已结束行。
+**面板有多大的容量？** 每个根会话最多保留 200 条，超出淘汰最旧的已结束行。
 
 **安全吗？** 轮询路由 `/api/subagent-monitor/snapshot` 面向回环地址、无鉴权，仅建议本地/内网使用。
 
