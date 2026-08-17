@@ -202,6 +202,10 @@ dsh-subagent-monitor/
 - **构建**：`tsdown` 产出 `lib/index.js` 与 `lib/client.js`；配置文件内联
   平台模块与 `__ModuleLoader__` banner，使仓库**自包含**——不依赖主仓预设，
   `git clone` 后即可 `pnpm install && pnpm build`。
+- **Hook 顺序约束**：`Panel` 组件的所有 hooks（含 `useRef` / `useEffect`）
+  必须位于 `!open` 提前 return **之前**——否则面板打开时 hooks 数量与上次
+  渲染不一致，React 抛 #310 并击穿 `shell.overlay` slot（v0.2 开发期踩过，
+  已修复并在此记录）。
 - **分发**：`dsh plugin add <git/npm>` 安装；`prepare` 脚本保证 git 安装
   路径也有构建产物。
 

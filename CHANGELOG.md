@@ -15,6 +15,10 @@
 
 - 面板结构改为「左侧拖动柄 + 内容列」横向 flex 布局，内容区新增 `.smn-panel-inner` 容器。
 
+### Fixed
+
+- 修复面板打开时 `shell.overlay` slot 崩溃（React #310）：`useRef` / `useEffect` 曾被放在 `!open` 提前 return 之后，导致 hook 数量在两次渲染间不一致；已移至提前 return 之前。
+
 ## [0.1.0] - 2026-08-15
 
 ### Added

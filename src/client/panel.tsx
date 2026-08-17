@@ -266,6 +266,23 @@ export function Panel(props: PanelProps): ReactElement | null {
   const subagentParent = props.useSessions(select => (
     select.currentAddress === undefined ? undefined : select.currentAddress.parentSessionId
   ))
+
+  // Hooks MUST run before the early return below: React #310 (more hooks than
+  // the previous render) otherwise crashes the slot when the panel opens.
+  const panelRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    loadLayout()
+    clampLayout()
+    saveLayout()
+    const onResize = (): void => {
+      clampLayout()
+      if (panelRef.current !== null) applyLayoutStyle(panelRef.current)
+    }
+    window.addEventListener('resize', onResize)
+    return () => { window.removeEventListener('resize', onResize) }
+  }, [])
+
   if (!monitor.open) return null
 
   // Newest first; sortKey covers catalog rows the host has not observed run.
@@ -281,20 +298,6 @@ export function Panel(props: PanelProps): ReactElement | null {
     row.status === 'error' || row.status === 'aborted' || row.status === 'max-tokens' || row.status === 'refusal',
   ).length
   const sessionId = monitor.sessionId
-
-  const panelRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    loadLayout()
-    clampLayout()
-    saveLayout()
-    const onResize = (): void => {
-      clampLayout()
-      if (panelRef.current !== null) applyLayoutStyle(panelRef.current)
-    }
-    window.addEventListener('resize', onResize)
-    return () => { window.removeEventListener('resize', onResize) }
-  }, [])
 
   const style = layoutStyle()
 
