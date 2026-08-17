@@ -27,8 +27,8 @@ StateDot 规格（终态为实心点 + 10% 同色光晕）。最新派生的在�
 
 | 项 | 值 |
 | --- | --- |
-| 面板位置 | 默认右上角 top:80px / right:16px，宽 340px；标题左侧拖动柄可移动，位置记忆（localStorage） |
-| 面板高度 | 默认 max-height:min(560px, 100vh−160px)；底部拖动柄可调（最小 160px），高度记忆 |
+| 面板位置 | 默认右上角 top:80px / right:16px，宽 340px；标题左侧拖动柄可移动，位置记忆（localStorage，跨会话保留） |
+| 面板高度 | 默认 max-height:min(560px, 100vh−160px)；底部拖动柄可调（最小 160px），高度记忆（按会话隔离） |
 | 刷新频率 | 1 秒轮询（粗粒度 start/end 事件下足够“实时”） |
 | 历史保留 | 每个根会话最多 200 行，超出按最旧淘汰 |
 | 移动端 | ≤768px 默认不弹出（侧栏入口仍在） |
@@ -257,11 +257,11 @@ dsh-subagent-monitor/
    （成功 / 失败 / 打断）；
 2. **打断按钮**：卡片上加「打断」，调用 `subagents.interrupt`；
 3. **错误详情展开**：失败行可展开查看错误摘要；
-4. **i18n**：英文字典 + 英文 README。
+4. **UI 国际化**：面板文案英文字典 + 语言切换（README 已双语，UI 仍为中文硬编码）。
 
 ### 5.2 工程化
 
-- ✅ npm 发布 `@leetoners/dsh-ui-subagent-monitor`：v0.1.0 已上线（2026-08，
+- ✅ npm 发布 `@leetoners/dsh-ui-subagent-monitor`：v0.2.0 已上线（2026-08-17，
   GitHub Actions tag 触发 + SLSA provenance），
   `dsh plugin add @leetoners/dsh-ui-subagent-monitor` 一行安装；
 - GitHub Actions CI（typecheck + build 自动验证 PR）。
@@ -269,7 +269,8 @@ dsh-subagent-monitor/
 ### 5.3 生态收录
 
 - GitHub topic `dsh-plugin`（已设置，Oh-My-DSH 每 4 小时同步）；
-- PR 合并跟踪：Oh-My-DSH `data/curated.json`、awesome-dsh-plugin README。
+- ✅ awesome-dsh-plugin 已收录（commit `c7ad36e9`，PR #675 已合并）；
+- ⏳ Oh-My-DSH 目录 PR #8 待维护者合并。
 
 ---
 
