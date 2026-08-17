@@ -17,7 +17,7 @@
 Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style panel pinned to the **top-right** corner of the screen, showing the live run status of every subagent spawned from the current session.
 
 ```
-┌─ ⋮ Running subagents ────────────── [Collapse ▴] [✕] ┐
+┌─ ⤢ Running subagents ────────────── [Collapse ▴] [✕] ┐
 │ ┌───────────────────────────────────────────────┐ │
 │ │ 🔵 Count TS files in ui dir        [Open chat] │ │
 │ │    one-shot · 1a2b3c4d    running · 00:42     │ │
@@ -31,7 +31,7 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 └───────────────────────────────────────────────────┘
 ```
 
-> The `⋮` grip left of the title moves the panel, the bottom `═` grip resizes it; both are remembered, double-click resets.
+> The `⤢` four-arrow grip left of the title moves the panel, the bottom `═` grip resizes it; both are remembered, double-click resets.
 
 ![Subagent monitor panel (running + done statuses)](docs/screenshot.png)
 
@@ -43,7 +43,7 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 | 🃏 Card list | one rounded card per subagent; **Open chat** on the right, status and elapsed time on the second line |
 | 🌲 Tree indent | grandchild subagents are indented to the right |
 | 🔙 One-click back | inside a subagent session, the panel shows a **← Main session** button |
-| 🖐 Movable | drag the grip left of the title to move the panel; position is remembered, double-click resets |
+| 🖐 Movable | drag the four-arrow grip left of the title to move the panel; position is remembered, double-click resets |
 | 📏 Resizable | drag the bottom grip to resize the panel height; height is remembered, double-click resets |
 | 🔄 Refresh-proof | persistent composition row: the panel auto-recovers after page refresh / service restart |
 | 📱 Mobile-friendly | hidden by default at ≤768px viewport; the sidebar entry still opens it manually |
@@ -108,7 +108,7 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 
 **How much history does the panel keep?** At most 200 rows per root session; the oldest ended rows are evicted beyond that.
 
-**Are the panel position and height remembered?** Yes. They are persisted to localStorage on drag and restored after page reload / browser restart; double-click a grip to reset.
+**Are the panel position and height remembered?** Yes, per session: each session keeps its own position / height (localStorage key carries the session id), so switching sessions never leaks the layout; they survive page reload / browser restart. Double-click a grip to reset.
 
 **Is it safe?** The polling route `/api/subagent-monitor/snapshot` binds to the loopback address with no auth; recommended for local / intranet use only.
 

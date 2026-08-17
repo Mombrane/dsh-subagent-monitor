@@ -115,8 +115,9 @@ DSH 支持两种扩展：动态 Cordis 插件（`cordis_define`/`cordis_run`）�
   `pointerup` / `pointercancel`，不依赖 `setPointerCapture`——注入 / 合成
   指针事件没有活动指针，capture 会抛错导致拖动从未启动（ego 等合成输入
   环境实测踩坑）；
-- **释放时持久化**：位置 / 高度写入 `localStorage`（`dsh-smn.panel-layout.v1`），
-  刷新、关面板重开、重启浏览器后恢复；载入与窗口 resize 时钳制进视口；
+- **释放时持久化**：位置 / 高度写入 localStorage（`dsh-smn.panel-layout.v2.<sessionId>`，
+  **按会话隔离**——每个会话一个布局桶，无会话时落入 `__global__` 桶；切换
+  会话即换桶，面板大小/位置互不影响）。载入与窗口 resize 时钳制进视口；
 - **双击复位**：双击任一拖动柄清空对应布局，回到默认右上角 / 默认高度；
 - **最小化收起高度**：minimized 状态下不套用显式高度（面板缩回标题栏），
   展开时恢复记忆高度；minimized 翻转时命令式同步一次样式——React 的
@@ -278,6 +279,6 @@ dsh-subagent-monitor/
 - 运行状态点复刻侧栏 tab 的 `StateDot`：蓝色像素追逐动画
   （`--dsw-static-deepseek-450`，外圈 8 格阶梯点亮），终态为实心点 +
   10% 同色光晕（成功/警告/错误走 `--dsw-alias-state-*` token）；
-- 标题左侧 / 底部拖动柄用低对比度圆点列与短横条，悬停时加深，与卡片区
-  视觉分离；
+- 标题左侧（四角箭头图标）/ 底部拖动柄（短横条）用低对比度配色，悬停时
+  加深，与卡片区视觉分离；
 - 卡片背景与边框取自主题 token，自动适配浅色 / 深色主题。

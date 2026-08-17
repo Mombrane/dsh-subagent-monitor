@@ -174,34 +174,50 @@ interface PanelLayout {
   height: number | null
 }
 
-const LAYOUT_KEY = 'dsh-smn.panel-layout.v1'
+const LAYOUT_KEY_PREFIX = 'dsh-smn.panel-layout.v2.'
 const DEFAULT_TOP = 80
 const EDGE = 8
 const MIN_HEIGHT = 160
 
-const layout: PanelLayout = { left: null, top: null, height: null }
-let layoutLoaded = false
+// One layout bucket per session (position / height memory is per-session);
+// sessions without an id share the '__global__' bucket.
+const layouts = new Map<string, PanelLayout>()
+let layoutKey = ''
+let layout: PanelLayout = { left: null, top: null, height: null }
 
-function loadLayout(): void {
-  if (layoutLoaded) return
-  layoutLoaded = true
+/** Bind the module-level layout to the current session's bucket. */
+function bindLayout(sessionId: string | undefined): void {
+  const key = sessionId ?? '__global__'
+  if (key === layoutKey) return
+  layoutKey = key
+  const cached = layouts.get(key)
+  if (cached !== undefined) {
+    layout = cached
+    clampLayout()
+    return
+  }
+  const fresh: PanelLayout = { left: null, top: null, height: null }
   try {
-    const raw = window.localStorage.getItem(LAYOUT_KEY)
-    if (raw === null) return
-    const parsed = JSON.parse(raw) as Partial<PanelLayout>
-    if (typeof parsed.left === 'number' && Number.isFinite(parsed.left)) layout.left = parsed.left
-    if (typeof parsed.top === 'number' && Number.isFinite(parsed.top)) layout.top = parsed.top
-    if (typeof parsed.height === 'number' && Number.isFinite(parsed.height)) layout.height = parsed.height
-    // A half position makes no sense: fall back to the default corner anchor.
-    if (layout.left === null || layout.top === null) { layout.left = null; layout.top = null }
+    const raw = window.localStorage.getItem(LAYOUT_KEY_PREFIX + key)
+    if (raw !== null) {
+      const parsed = JSON.parse(raw) as Partial<PanelLayout>
+      if (typeof parsed.left === 'number' && Number.isFinite(parsed.left)) fresh.left = parsed.left
+      if (typeof parsed.top === 'number' && Number.isFinite(parsed.top)) fresh.top = parsed.top
+      if (typeof parsed.height === 'number' && Number.isFinite(parsed.height)) fresh.height = parsed.height
+      // A half position makes no sense: fall back to the default corner anchor.
+      if (fresh.left === null || fresh.top === null) { fresh.left = null; fresh.top = null }
+    }
   } catch {
     // Corrupt layout: keep defaults.
   }
+  layouts.set(key, fresh)
+  layout = fresh
+  clampLayout()
 }
 
 function saveLayout(): void {
   try {
-    window.localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout))
+    window.localStorage.setItem(LAYOUT_KEY_PREFIX + layoutKey, JSON.stringify(layout))
   } catch {
     // Storage unavailable: layout still lives for this page.
   }
@@ -317,9 +333,7 @@ export function Panel(props: PanelProps): ReactElement | null {
   minimizedRef.current = monitor.minimized
 
   useEffect(() => {
-    loadLayout()
     clampLayout()
-    saveLayout()
     const onResize = (): void => {
       clampLayout()
       if (panelRef.current !== null) applyLayoutStyle(panelRef.current, minimizedRef.current)
@@ -337,6 +351,10 @@ export function Panel(props: PanelProps): ReactElement | null {
   }, [monitor.minimized])
 
   if (!monitor.open) return null
+
+  // Per-session layout: rebind the module-level layout to the current session
+  // before computing styles, so switching sessions swaps position/height too.
+  bindLayout(monitor.sessionId)
 
   // Newest first; sortKey covers catalog rows the host has not observed run.
   const ordered = [...monitor.rows].sort((a, b) => {
@@ -443,7 +461,12 @@ export function Panel(props: PanelProps): ReactElement | null {
         onPointerDown={onMoveGripDown}
         onDoubleClick={resetPosition}
       >
-        <span className="smn-grip-v-dots" />
+        <svg className="smn-grip-v-icon" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+          <path d="M6 0.8 7.3 3.6H4.7Z" />
+          <path d="M6 11.2 4.7 8.4H7.3Z" />
+          <path d="M0.8 6 3.6 4.7V7.3Z" />
+          <path d="M11.2 6 8.4 4.7V7.3Z" />
+        </svg>
       </div>
       <span className="smn-panel-title">运行中的子代理</span>
       {subagentParent !== undefined && sessionsSvc !== undefined

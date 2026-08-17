@@ -48,20 +48,18 @@ export function apply(ctx: ClientContext): void {
 }
 /* Move grip: a small handle sitting left of the panel title, only in the header. */
 .smn-grip-v {
-  flex: none; width: 14px; height: 20px; cursor: grab;
+  flex: none; width: 18px; height: 20px; cursor: grab;
   display: flex; align-items: center; justify-content: center;
   border-radius: 4px;
   user-select: none; -webkit-user-select: none; touch-action: none;
 }
 .smn-grip-v:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.05)); }
 .smn-grip-v:active { cursor: grabbing; }
-.smn-grip-v-dots {
-  width: 6px; height: 14px;
-  background-image: radial-gradient(circle, var(--dsw-alias-label-tertiary, #cbd5e1) 1.2px, transparent 1.8px);
-  background-size: 6px 6px; background-repeat: repeat-y; background-position: center top;
-  opacity: 0.55;
+.smn-grip-v-icon {
+  flex: none; fill: currentColor;
+  color: var(--dsw-alias-label-tertiary, #cbd5e1); opacity: 0.55;
 }
-.smn-grip-v:hover .smn-grip-v-dots { opacity: 1; }
+.smn-grip-v:hover .smn-grip-v-icon { color: var(--dsw-alias-label-primary, inherit); opacity: 1; }
 .smn-grip-h {
   flex: none; height: 12px; cursor: ns-resize;
   display: flex; align-items: center; justify-content: center;
