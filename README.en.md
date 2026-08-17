@@ -31,7 +31,7 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 └───────────────────────────────────────────────────┘
 ```
 
-> The left `⋮` grip moves the panel, the bottom `═` grip resizes it; both are remembered, double-click resets.
+> The `⋮` grip left of the title moves the panel, the bottom `═` grip resizes it; both are remembered, double-click resets.
 
 ![Subagent monitor panel (running + done statuses)](docs/screenshot.png)
 
@@ -43,7 +43,7 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 | 🃏 Card list | one rounded card per subagent; **Open chat** on the right, status and elapsed time on the second line |
 | 🌲 Tree indent | grandchild subagents are indented to the right |
 | 🔙 One-click back | inside a subagent session, the panel shows a **← Main session** button |
-| 🖐 Movable | drag the left grip to move the panel; position is remembered, double-click resets |
+| 🖐 Movable | drag the grip left of the title to move the panel; position is remembered, double-click resets |
 | 📏 Resizable | drag the bottom grip to resize the panel height; height is remembered, double-click resets |
 | 🔄 Refresh-proof | persistent composition row: the panel auto-recovers after page refresh / service restart |
 | 📱 Mobile-friendly | hidden by default at ≤768px viewport; the sidebar entry still opens it manually |

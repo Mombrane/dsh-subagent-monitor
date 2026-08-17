@@ -26,7 +26,7 @@
 
 | 项 | 值 |
 | --- | --- |
-| 面板位置 | 默认右上角 top:80px / right:16px，宽 340px；左侧拖动柄可移动，位置记忆（localStorage） |
+| 面板位置 | 默认右上角 top:80px / right:16px，宽 340px；标题左侧拖动柄可移动，位置记忆（localStorage） |
 | 面板高度 | 默认 max-height:min(560px, 100vh−160px)；底部拖动柄可调（最小 160px），高度记忆 |
 | 刷新频率 | 1 秒轮询（粗粒度 start/end 事件下足够“实时”） |
 | 历史保留 | 每个根会话最多 200 行，超出按最旧淘汰 |
@@ -105,11 +105,15 @@ DSH 支持两种扩展：动态 Cordis 插件（`cordis_define`/`cordis_run`）�
 §2.6 的卡顿根因不是“拖拽”本身，而是**每个 `pointermove` 都走 React 状态
 重渲染**。v0.2 重新引入拖拽，但换了实现路径：
 
-- **专用拖动柄**：左侧竖向柄（移动面板位置）、底部横向柄（调整高度），
-  只有按住柄才触发，不再整面板响应；
+- **专用拖动柄**：标题「运行中的子代理」文字左侧的小手柄（移动面板位置）、
+  底部横向柄（调整高度），只有按住柄才触发，不再整面板响应；
 - **拖动期间直改 DOM**：`pointermove` 里直接写 `panel.style.left/top/height`，
   不经过任何 React state——1s 轮询触发的常规重渲染会从模块级 `layout`
   读出相同数值，无视觉跳变；
+- **监听器挂在 window 上**：拖动手势期间在 `window` 上挂 `pointermove` /
+  `pointerup` / `pointercancel`，不依赖 `setPointerCapture`——注入 / 合成
+  指针事件没有活动指针，capture 会抛错导致拖动从未启动（ego 等合成输入
+  环境实测踩坑）；
 - **释放时持久化**：位置 / 高度写入 `localStorage`（`dsh-smn.panel-layout.v1`），
   刷新、关面板重开、重启浏览器后恢复；载入与窗口 resize 时钳制进视口；
 - **双击复位**：双击任一拖动柄清空对应布局，回到默认右上角 / 默认高度。
@@ -254,6 +258,6 @@ dsh-subagent-monitor/
 - 运行状态点为圆角方块（3px），使用与会话框 TurnStatus 指示器同款的
   deepseek 蓝渐变扫光（`--dsw-static-deepseek-500` → `200` → `500`，
   1.8s linear），并遵循 `prefers-reduced-motion`；
-- 左侧 / 底部拖动柄用低对比度圆点列与短横条，悬停时加深，与卡片区
+- 标题左侧 / 底部拖动柄用低对比度圆点列与短横条，悬停时加深，与卡片区
   视觉分离；
 - 卡片背景与边框取自主题 token，自动适配浅色 / 深色主题。

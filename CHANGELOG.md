@@ -7,17 +7,14 @@
 
 ### Added
 
-- 面板拖动：左侧新增竖向拖动柄（抓手点列），按住可自由移动面板；位置写入 localStorage，刷新 / 重启浏览器后恢复；双击复位到默认右上角。
+- 面板拖动：标题「运行中的子代理」左侧新增拖动柄（抓手点列），按住可自由移动面板；位置写入 localStorage，刷新 / 重启浏览器后恢复；双击复位到默认右上角。
 - 面板高度调节：底部新增横向拖动柄（统计栏与底边之间），上下拖动改变面板高度（最小 160px）；高度写入 localStorage，双击复位。
 - 运行状态点改为圆角方块：与 DSH 会话框「思考中」指示器（TurnStatus）同款的 deepseek 蓝渐变扫光（500 → 200 → 500，1.8s linear），替代原圆形呼吸动画；遵循 `prefers-reduced-motion`。
-
-### Changed
-
-- 面板结构改为「左侧拖动柄 + 内容列」横向 flex 布局，内容区新增 `.smn-panel-inner` 容器。
 
 ### Fixed
 
 - 修复面板打开时 `shell.overlay` slot 崩溃（React #310）：`useRef` / `useEffect` 曾被放在 `!open` 提前 return 之后，导致 hook 数量在两次渲染间不一致；已移至提前 return 之前。
+- 修复拖动柄在空面板 / 合成指针环境下无效：拖动监听改为 window 级指针监听，不再依赖 `setPointerCapture`（注入的合成指针事件没有活动指针，capture 会抛错导致拖动从未启动）。
 
 ## [0.1.0] - 2026-08-15
 

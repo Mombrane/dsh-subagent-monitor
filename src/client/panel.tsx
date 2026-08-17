@@ -304,15 +304,17 @@ export function Panel(props: PanelProps): ReactElement | null {
   // Left grip drags the panel; bottom grip resizes its height. Handlers write
   // straight to the DOM node (no React state per pointermove — that was the
   // lag source in the first drag attempt) and persist once on release.
+  // Listeners live on window during the gesture: setPointerCapture is NOT
+  // reliable here (synthetic/injected pointer events can lack an active
+  // pointer, so capture throws and the drag never starts).
   const onMoveGripDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     if (event.button !== 0) return
+    event.preventDefault()
     const el = panelRef.current
-    const grip = event.currentTarget
     if (el === null) return
     const rect = el.getBoundingClientRect()
     const offX = event.clientX - rect.left
     const offY = event.clientY - rect.top
-    grip.setPointerCapture(event.pointerId)
     const move = (ev: PointerEvent): void => {
       const vw = window.innerWidth
       const vh = window.innerHeight
@@ -322,13 +324,13 @@ export function Panel(props: PanelProps): ReactElement | null {
     }
     const end = (): void => {
       saveLayout()
-      grip.removeEventListener('pointermove', move)
-      grip.removeEventListener('pointerup', end)
-      grip.removeEventListener('pointercancel', end)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', end)
+      window.removeEventListener('pointercancel', end)
     }
-    grip.addEventListener('pointermove', move)
-    grip.addEventListener('pointerup', end)
-    grip.addEventListener('pointercancel', end)
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', end)
+    window.addEventListener('pointercancel', end)
   }
 
   const resetPosition = (): void => {
@@ -340,14 +342,13 @@ export function Panel(props: PanelProps): ReactElement | null {
 
   const onResizeGripDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
     if (event.button !== 0) return
+    event.preventDefault()
     const el = panelRef.current
-    const grip = event.currentTarget
     if (el === null) return
     const rect = el.getBoundingClientRect()
     const startH = rect.height
     const startTop = rect.top
     const startY = event.clientY
-    grip.setPointerCapture(event.pointerId)
     const move = (ev: PointerEvent): void => {
       const maxH = Math.max(MIN_HEIGHT, window.innerHeight - startTop - 16)
       layout.height = Math.min(Math.max(MIN_HEIGHT, startH + (ev.clientY - startY)), maxH)
@@ -355,13 +356,13 @@ export function Panel(props: PanelProps): ReactElement | null {
     }
     const end = (): void => {
       saveLayout()
-      grip.removeEventListener('pointermove', move)
-      grip.removeEventListener('pointerup', end)
-      grip.removeEventListener('pointercancel', end)
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', end)
+      window.removeEventListener('pointercancel', end)
     }
-    grip.addEventListener('pointermove', move)
-    grip.addEventListener('pointerup', end)
-    grip.addEventListener('pointercancel', end)
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', end)
+    window.addEventListener('pointercancel', end)
   }
 
   const resetHeight = (): void => {
@@ -382,6 +383,15 @@ export function Panel(props: PanelProps): ReactElement | null {
 
   const header = (
     <div className="smn-panel-header">
+      <div
+        className="smn-grip-v"
+        title="拖动调整位置 · 双击复位"
+        aria-hidden="true"
+        onPointerDown={onMoveGripDown}
+        onDoubleClick={resetPosition}
+      >
+        <span className="smn-grip-v-dots" />
+      </div>
       <span className="smn-panel-title">运行中的子代理</span>
       {subagentParent !== undefined && sessionsSvc !== undefined
         ? (
@@ -414,16 +424,7 @@ export function Panel(props: PanelProps): ReactElement | null {
   if (monitor.minimized) {
     return (
       <div className="smn-panel" style={style} ref={panelRef}>
-        <div
-          className="smn-grip-v"
-          title="拖动调整位置 · 双击复位"
-          aria-hidden="true"
-          onPointerDown={onMoveGripDown}
-          onDoubleClick={resetPosition}
-        >
-          <span className="smn-grip-v-dots" />
-        </div>
-        <div className="smn-panel-inner">{header}</div>
+        {header}
       </div>
     )
   }
@@ -503,28 +504,17 @@ export function Panel(props: PanelProps): ReactElement | null {
 
   return (
     <div className="smn-panel" style={style} ref={panelRef}>
+      {header}
+      {rowsEl}
+      {footer}
       <div
-        className="smn-grip-v"
-        title="拖动调整位置 · 双击复位"
+        className="smn-grip-h"
+        title="拖动调整高度 · 双击复位"
         aria-hidden="true"
-        onPointerDown={onMoveGripDown}
-        onDoubleClick={resetPosition}
+        onPointerDown={onResizeGripDown}
+        onDoubleClick={resetHeight}
       >
-        <span className="smn-grip-v-dots" />
-      </div>
-      <div className="smn-panel-inner">
-        {header}
-        {rowsEl}
-        {footer}
-        <div
-          className="smn-grip-h"
-          title="拖动调整高度 · 双击复位"
-          aria-hidden="true"
-          onPointerDown={onResizeGripDown}
-          onDoubleClick={resetHeight}
-        >
-          <span className="smn-grip-h-bar" />
-        </div>
+        <span className="smn-grip-h-bar" />
       </div>
     </div>
   )
