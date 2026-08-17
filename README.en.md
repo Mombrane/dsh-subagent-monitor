@@ -19,7 +19,7 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 ```
 ┌─ ⋮ Running subagents ────────────── [Collapse ▴] [✕] ┐
 │ ┌───────────────────────────────────────────────┐ │
-│ │ 🟦 Count TS files in ui dir        [Open chat] │ │
+│ │ 🔵 Count TS files in ui dir        [Open chat] │ │
 │ │    one-shot · 1a2b3c4d    running · 00:42     │ │
 │ └───────────────────────────────────────────────┘ │
 │ ┌───────────────────────────────────────────────┐ │
@@ -39,7 +39,7 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 
 | Feature | Description |
 | --- | --- |
-| 🟢 Live status | running (🟦 blue gradient-sweep square, same as the DSH chat indicator + stopwatch), done, failed, interrupted, token limit, rejected |
+| 🟢 Live status | running (🔵 blue pixel-chase animation, same as the DSH sidebar state dot + stopwatch), done (green dot + halo), failed, interrupted, token limit, rejected |
 | 🃏 Card list | one rounded card per subagent; **Open chat** on the right, status and elapsed time on the second line |
 | 🌲 Tree indent | grandchild subagents are indented to the right |
 | 🔙 One-click back | inside a subagent session, the panel shows a **← Main session** button |
@@ -94,11 +94,11 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 
 | Status | Meaning |
 | --- | --- |
-| 🟦 Running | in progress, blue gradient-sweep square (same as the DSH chat indicator) + live stopwatch |
-| 🟢 Done | the panel witnessed a successful finish; shows elapsed time |
+| 🔵 Running | in progress, blue pixel-chase animation (same as the DSH sidebar tab ongoing state) + live stopwatch |
+| 🟢 Done | the panel witnessed a successful finish; shows elapsed time (green dot + halo) |
 | ⚪ Ended | backfilled history row: created before a service restart, outcome not observed (success/failure unknown) |
-| 🔴 Failed | ended in error |
-| 🟠 Interrupted / token limit / rejected | aborted / hit the token cap / request rejected |
+| 🔴 Failed | ended in error (red dot + halo) |
+| 🟠 Interrupted / token limit / rejected | aborted / hit the token cap / request rejected (amber dot + halo) |
 
 ## ❓ FAQ
 

@@ -99,29 +99,34 @@ export function apply(ctx: ClientContext): void {
   padding: 7px 10px;
 }
 .smn-row-main { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.smn-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-/* Running marker: rounded square with the same blue gradient sweep as the
-   chat TurnStatus indicator (deepseek-500 → 200 → 500 shimmer, 1.8s linear). */
-.smn-dot-running {
-  border-radius: 3px;
-  background: linear-gradient(90deg,
-    var(--dsw-static-deepseek-500, rgb(65, 118, 230)) 0%,
-    var(--dsw-static-deepseek-500, rgb(65, 118, 230)) 40%,
-    var(--dsw-static-deepseek-200, rgb(211, 226, 255)) 50%,
-    var(--dsw-static-deepseek-500, rgb(65, 118, 230)) 60%,
-    var(--dsw-static-deepseek-500, rgb(65, 118, 230)) 100%);
-  background-size: 250% 100%;
-  background-position: 100% 0;
-  animation: smn-dot-shimmer 1.8s linear infinite;
+.smn-dot { width: 10px; height: 10px; flex: none; }
+/* Running: StateDot "ongoing" — pixel-art chase around the 3x3 outer ring
+   (DSH sidebar tab spec: 2x2 cells, clockwise stepped brightness trail). */
+.smn-dot-running { color: var(--dsw-static-deepseek-450, rgb(86, 134, 254)); }
+.smn-dot-cell { fill: currentColor; opacity: 0.15; animation: smn-dot-chase 1s infinite; }
+@keyframes smn-dot-chase {
+  0%, 12.4% { opacity: 1; }
+  12.5%, 24.9% { opacity: 0.6; }
+  25%, 37.4% { opacity: 0.35; }
+  37.5%, 100% { opacity: 0.15; }
 }
-@keyframes smn-dot-shimmer { to { background-position: 0 0; } }
-@media (prefers-reduced-motion: reduce) {
-  .smn-dot-running { animation: none; }
+/* Terminal states: StateDot spec — 10% same-color halo (::before) around a
+   6/10 solid core (::after); the color rides currentColor per state. */
+.smn-dot-ok, .smn-dot-error, .smn-dot-warn, .smn-dot-off {
+  position: relative; display: inline-block;
 }
-.smn-dot-ok { background: var(--dsw-alias-state-success-primary, #16a34a); }
-.smn-dot-error { background: var(--dsw-alias-state-error-primary, #dc2626); }
-.smn-dot-warn { background: var(--dsw-alias-state-warn-primary, #d97706); }
-.smn-dot-off { background: var(--dsw-alias-label-tertiary, #cbd5e1); }
+.smn-dot-ok::before, .smn-dot-error::before, .smn-dot-warn::before, .smn-dot-off::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: currentColor; opacity: 0.1;
+}
+.smn-dot-ok::after, .smn-dot-error::after, .smn-dot-warn::after, .smn-dot-off::after {
+  content: ''; position: absolute; inset: 20%; border-radius: 50%;
+  background: currentColor;
+}
+.smn-dot-ok { color: var(--dsw-alias-state-success-primary, rgb(34, 197, 94)); }
+.smn-dot-error { color: var(--dsw-alias-state-error-primary, rgb(236, 19, 19)); }
+.smn-dot-warn { color: var(--dsw-alias-state-warn-primary, rgb(245, 158, 11)); }
+.smn-dot-off { color: var(--dsw-alias-label-tertiary, #cbd5e1); }
 .smn-row-label {
   flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: 13px; line-height: 18px;

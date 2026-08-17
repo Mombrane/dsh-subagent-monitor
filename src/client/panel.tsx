@@ -104,6 +104,45 @@ const STATUS: Record<string, StatusMeta> = {
   refusal: { cls: 'smn-dot-warn', label: '已拒绝' },
 }
 
+// ---- status marker: DSH-native StateDot spec (ui-primitives) ----
+// ongoing = pixel-art chase around the 3x3 outer ring; terminal states =
+// solid core + 10% same-color halo. See ui-primitives/src/StateDot.tsx.
+
+/** Outer 3x3 matrix cells (2px pixels on a 10px grid), clockwise from top-left. */
+const CHASE_CELLS: readonly (readonly [number, number])[] = [
+  [0, 0], [4, 0], [8, 0], [8, 4], [8, 8], [4, 8], [0, 8], [0, 4],
+]
+
+function StatusDot({ status }: { status: string }): ReactElement {
+  if (status === 'running') {
+    return (
+      <svg
+        className="smn-dot smn-dot-running"
+        width={10}
+        height={10}
+        viewBox="0 0 10 10"
+        shapeRendering="crispEdges"
+        aria-hidden="true"
+      >
+        {CHASE_CELLS.map(([x, y], index) => (
+          <rect
+            key={`${x}-${y}`}
+            className="smn-dot-cell"
+            x={x}
+            y={y}
+            width="2"
+            height="2"
+            /* Negative delay phases the chase so every cell animates from mount. */
+            style={{ animationDelay: `${(index - CHASE_CELLS.length) * 125}ms` }}
+          />
+        ))}
+      </svg>
+    )
+  }
+  const meta = STATUS[status] ?? UNKNOWN
+  return <span className={`smn-dot ${meta.cls}`} aria-hidden="true" />
+}
+
 function fmtDuration(start: number | undefined, end: number | undefined): string {
   if (start === undefined) return '—'
   const ms = (end ?? Date.now()) - start
@@ -451,7 +490,7 @@ export function Panel(props: PanelProps): ReactElement | null {
           return (
             <div key={row.id} className="smn-row" style={{ marginLeft: indent }}>
               <div className="smn-row-main">
-                <span className={`smn-dot ${meta.cls}`} />
+                <StatusDot status={row.status} />
                 <span className="smn-row-label" title={rowLabel(row)}>{rowLabel(row)}</span>
                 {row.mode !== undefined && sessionsSvc !== undefined
                   ? (
