@@ -218,7 +218,7 @@ function clampLayout(): void {
   }
 }
 
-function applyLayoutStyle(el: HTMLElement): void {
+function applyLayoutStyle(el: HTMLElement, minimized = false): void {
   if (layout.left !== null && layout.top !== null) {
     el.style.left = `${layout.left}px`
     el.style.top = `${layout.top}px`
@@ -228,7 +228,9 @@ function applyLayoutStyle(el: HTMLElement): void {
     el.style.top = `${DEFAULT_TOP}px`
     el.style.right = '16px'
   }
-  if (layout.height !== null) {
+  // A minimized panel collapses to its header: the remembered height only
+  // applies while expanded, and returns when the panel expands again.
+  if (layout.height !== null && !minimized) {
     el.style.height = `${layout.height}px`
     el.style.maxHeight = 'none'
   } else {
@@ -237,11 +239,11 @@ function applyLayoutStyle(el: HTMLElement): void {
   }
 }
 
-function layoutStyle(): CSSProperties {
+function layoutStyle(minimized = false): CSSProperties {
   const style: CSSProperties = layout.left !== null && layout.top !== null
     ? { left: `${layout.left}px`, top: `${layout.top}px` }
     : { top: `${DEFAULT_TOP}px`, right: '16px' }
-  if (layout.height !== null) {
+  if (layout.height !== null && !minimized) {
     style.height = `${layout.height}px`
     style.maxHeight = 'none'
   }
@@ -309,6 +311,10 @@ export function Panel(props: PanelProps): ReactElement | null {
   // Hooks MUST run before the early return below: React #310 (more hooks than
   // the previous render) otherwise crashes the slot when the panel opens.
   const panelRef = useRef<HTMLDivElement | null>(null)
+  // Mirrors the minimized state for the mount-only resize listener below,
+  // whose closure would otherwise capture the first render's value.
+  const minimizedRef = useRef(monitor.minimized)
+  minimizedRef.current = monitor.minimized
 
   useEffect(() => {
     loadLayout()
@@ -316,11 +322,19 @@ export function Panel(props: PanelProps): ReactElement | null {
     saveLayout()
     const onResize = (): void => {
       clampLayout()
-      if (panelRef.current !== null) applyLayoutStyle(panelRef.current)
+      if (panelRef.current !== null) applyLayoutStyle(panelRef.current, minimizedRef.current)
     }
     window.addEventListener('resize', onResize)
     return () => { window.removeEventListener('resize', onResize) }
   }, [])
+
+  // React's style diff cannot clear styles the drag handlers mutated directly
+  // on the DOM: the last rendered style object never contained them, so a
+  // minimize re-render sees "no diff" and leaves e.g. the dragged height on
+  // the collapsed box. Reconcile imperatively when minimized flips.
+  useEffect(() => {
+    if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.minimized)
+  }, [monitor.minimized])
 
   if (!monitor.open) return null
 
@@ -338,7 +352,7 @@ export function Panel(props: PanelProps): ReactElement | null {
   ).length
   const sessionId = monitor.sessionId
 
-  const style = layoutStyle()
+  const style = layoutStyle(monitor.minimized)
 
   // Left grip drags the panel; bottom grip resizes its height. Handlers write
   // straight to the DOM node (no React state per pointermove — that was the
@@ -359,7 +373,7 @@ export function Panel(props: PanelProps): ReactElement | null {
       const vh = window.innerHeight
       layout.left = Math.min(Math.max(EDGE, ev.clientX - offX), Math.max(EDGE, vw - rect.width - EDGE))
       layout.top = Math.min(Math.max(EDGE, ev.clientY - offY), Math.max(EDGE, vh - 60))
-      applyLayoutStyle(el)
+      applyLayoutStyle(el, monitor.minimized)
     }
     const end = (): void => {
       saveLayout()
@@ -376,7 +390,7 @@ export function Panel(props: PanelProps): ReactElement | null {
     layout.left = null
     layout.top = null
     saveLayout()
-    if (panelRef.current !== null) applyLayoutStyle(panelRef.current)
+    if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.minimized)
   }
 
   const onResizeGripDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
@@ -407,7 +421,7 @@ export function Panel(props: PanelProps): ReactElement | null {
   const resetHeight = (): void => {
     layout.height = null
     saveLayout()
-    if (panelRef.current !== null) applyLayoutStyle(panelRef.current)
+    if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.minimized)
   }
 
   const openChild = (row: MonitorRow): void => {
