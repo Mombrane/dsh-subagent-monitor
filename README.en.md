@@ -43,8 +43,8 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 | 🃏 Card list | one rounded card per subagent; **Open chat** on the right, status and elapsed time on the second line |
 | 🌲 Tree indent | grandchild subagents are indented to the right |
 | 🔙 One-click back | inside a subagent session, the panel shows a **← Main session** button |
-| 🖐 Movable | drag the four-arrow grip left of the title to move the panel; position is remembered, double-click resets |
-| 📏 Resizable | drag the bottom grip to resize the panel height; height is remembered, double-click resets |
+| 🖐 Movable | drag the four-arrow grip left of the title to move the panel; position is remembered (shared across sessions), double-click resets |
+| 📏 Resizable | drag the bottom grip to resize the panel height; height is remembered per session, double-click resets |
 | 🔄 Refresh-proof | persistent composition row: the panel auto-recovers after page refresh / service restart |
 | 📱 Mobile-friendly | hidden by default at ≤768px viewport; the sidebar entry still opens it manually |
 
@@ -108,7 +108,7 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 
 **How much history does the panel keep?** At most 200 rows per root session; the oldest ended rows are evicted beyond that.
 
-**Are the panel position and height remembered?** Yes, per session: each session keeps its own position / height (localStorage key carries the session id), so switching sessions never leaks the layout; they survive page reload / browser restart. Double-click a grip to reset.
+**Are the panel position and height remembered?** Yes, with two different policies: the **position is shared across sessions** (one spot for all of them), while the **height is remembered per session** (localStorage key carries the session id, so switching sessions never leaks the size); they survive page reload / browser restart. Double-click a grip to reset.
 
 **Is it safe?** The polling route `/api/subagent-monitor/snapshot` binds to the loopback address with no auth; recommended for local / intranet use only.
 

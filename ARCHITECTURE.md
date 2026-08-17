@@ -115,9 +115,11 @@ DSH 支持两种扩展：动态 Cordis 插件（`cordis_define`/`cordis_run`）�
   `pointerup` / `pointercancel`，不依赖 `setPointerCapture`——注入 / 合成
   指针事件没有活动指针，capture 会抛错导致拖动从未启动（ego 等合成输入
   环境实测踩坑）；
-- **释放时持久化**：位置 / 高度写入 localStorage（`dsh-smn.panel-layout.v2.<sessionId>`，
-  **按会话隔离**——每个会话一个布局桶，无会话时落入 `__global__` 桶；切换
-  会话即换桶，面板大小/位置互不影响）。载入与窗口 resize 时钳制进视口；
+- **释放时持久化（双策略）**：位置写入全局单键
+  `dsh-smn.panel-position.v1`（**跨会话保留**同一位置）；高度写入
+  `dsh-smn.panel-height.v2.<sessionId>`（**按会话隔离**，无会话时落入
+  `__global__` 桶——切换会话换桶，面板大小互不影响）。载入与窗口 resize
+  时钳制进视口；
 - **双击复位**：双击任一拖动柄清空对应布局，回到默认右上角 / 默认高度；
 - **最小化收起高度**：minimized 状态下不套用显式高度（面板缩回标题栏），
   展开时恢复记忆高度；minimized 翻转时命令式同步一次样式——React 的

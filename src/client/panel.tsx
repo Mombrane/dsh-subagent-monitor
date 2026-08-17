@@ -174,50 +174,74 @@ interface PanelLayout {
   height: number | null
 }
 
-const LAYOUT_KEY_PREFIX = 'dsh-smn.panel-layout.v2.'
+// Position memory is global (one spot shared across sessions); height memory
+// is per-session (each session keeps its own panel size). Two storage spaces:
+const POSITION_KEY = 'dsh-smn.panel-position.v1'
+const HEIGHT_KEY_PREFIX = 'dsh-smn.panel-height.v2.'
 const DEFAULT_TOP = 80
 const EDGE = 8
 const MIN_HEIGHT = 160
 
-// One layout bucket per session (position / height memory is per-session);
-// sessions without an id share the '__global__' bucket.
-const layouts = new Map<string, PanelLayout>()
-let layoutKey = ''
+const heights = new Map<string, number | null>()
+let heightKey = ''
 let layout: PanelLayout = { left: null, top: null, height: null }
+let positionLoaded = false
 
-/** Bind the module-level layout to the current session's bucket. */
-function bindLayout(sessionId: string | undefined): void {
-  const key = sessionId ?? '__global__'
-  if (key === layoutKey) return
-  layoutKey = key
-  const cached = layouts.get(key)
-  if (cached !== undefined) {
-    layout = cached
-    clampLayout()
-    return
-  }
-  const fresh: PanelLayout = { left: null, top: null, height: null }
+/** Load the shared position once per page. */
+function loadPosition(): void {
+  if (positionLoaded) return
+  positionLoaded = true
   try {
-    const raw = window.localStorage.getItem(LAYOUT_KEY_PREFIX + key)
+    const raw = window.localStorage.getItem(POSITION_KEY)
     if (raw !== null) {
-      const parsed = JSON.parse(raw) as Partial<PanelLayout>
-      if (typeof parsed.left === 'number' && Number.isFinite(parsed.left)) fresh.left = parsed.left
-      if (typeof parsed.top === 'number' && Number.isFinite(parsed.top)) fresh.top = parsed.top
-      if (typeof parsed.height === 'number' && Number.isFinite(parsed.height)) fresh.height = parsed.height
+      const parsed = JSON.parse(raw) as { left?: number, top?: number }
+      if (typeof parsed.left === 'number' && Number.isFinite(parsed.left)) layout.left = parsed.left
+      if (typeof parsed.top === 'number' && Number.isFinite(parsed.top)) layout.top = parsed.top
       // A half position makes no sense: fall back to the default corner anchor.
-      if (fresh.left === null || fresh.top === null) { fresh.left = null; fresh.top = null }
+      if (layout.left === null || layout.top === null) { layout.left = null; layout.top = null }
     }
   } catch {
     // Corrupt layout: keep defaults.
   }
-  layouts.set(key, fresh)
-  layout = fresh
+}
+
+/** Bind the height slot to the current session's bucket. */
+function bindHeight(sessionId: string | undefined): void {
+  const key = sessionId ?? '__global__'
+  if (key === heightKey) return
+  heightKey = key
+  const cached = heights.get(key)
+  if (cached !== undefined) {
+    layout.height = cached
+    clampLayout()
+    return
+  }
+  let h: number | null = null
+  try {
+    const raw = window.localStorage.getItem(HEIGHT_KEY_PREFIX + key)
+    if (raw !== null) {
+      const parsed = JSON.parse(raw) as { height?: number }
+      if (typeof parsed.height === 'number' && Number.isFinite(parsed.height)) h = parsed.height
+    }
+  } catch {
+    // Corrupt height: keep default.
+  }
+  heights.set(key, h)
+  layout.height = h
   clampLayout()
 }
 
-function saveLayout(): void {
+function savePosition(): void {
   try {
-    window.localStorage.setItem(LAYOUT_KEY_PREFIX + layoutKey, JSON.stringify(layout))
+    window.localStorage.setItem(POSITION_KEY, JSON.stringify({ left: layout.left, top: layout.top }))
+  } catch {
+    // Storage unavailable: layout still lives for this page.
+  }
+}
+
+function saveHeight(): void {
+  try {
+    window.localStorage.setItem(HEIGHT_KEY_PREFIX + heightKey, JSON.stringify({ height: layout.height }))
   } catch {
     // Storage unavailable: layout still lives for this page.
   }
@@ -352,9 +376,10 @@ export function Panel(props: PanelProps): ReactElement | null {
 
   if (!monitor.open) return null
 
-  // Per-session layout: rebind the module-level layout to the current session
-  // before computing styles, so switching sessions swaps position/height too.
-  bindLayout(monitor.sessionId)
+  // Shared position (once per page) + per-session height: rebind the height
+  // slot to the current session before computing styles.
+  loadPosition()
+  bindHeight(monitor.sessionId)
 
   // Newest first; sortKey covers catalog rows the host has not observed run.
   const ordered = [...monitor.rows].sort((a, b) => {
@@ -394,7 +419,7 @@ export function Panel(props: PanelProps): ReactElement | null {
       applyLayoutStyle(el, monitor.minimized)
     }
     const end = (): void => {
-      saveLayout()
+      savePosition()
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', end)
       window.removeEventListener('pointercancel', end)
@@ -407,7 +432,7 @@ export function Panel(props: PanelProps): ReactElement | null {
   const resetPosition = (): void => {
     layout.left = null
     layout.top = null
-    saveLayout()
+    savePosition()
     if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.minimized)
   }
 
@@ -426,7 +451,7 @@ export function Panel(props: PanelProps): ReactElement | null {
       applyLayoutStyle(el)
     }
     const end = (): void => {
-      saveLayout()
+      saveHeight()
       window.removeEventListener('pointermove', move)
       window.removeEventListener('pointerup', end)
       window.removeEventListener('pointercancel', end)
@@ -438,7 +463,7 @@ export function Panel(props: PanelProps): ReactElement | null {
 
   const resetHeight = (): void => {
     layout.height = null
-    saveLayout()
+    saveHeight()
     if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.minimized)
   }
 
