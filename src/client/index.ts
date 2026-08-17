@@ -38,7 +38,7 @@ export function apply(ctx: ClientContext): void {
 .smn-panel {
   pointer-events: auto;
   position: fixed; width: 340px; max-height: min(560px, calc(100vh - 160px));
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: row;
   background: var(--dsw-specific-sidebar-fill, var(--dsw-alias-bg-base, #ffffff));
   border: 1px solid var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.08));
   border-radius: 12px;
@@ -46,6 +46,36 @@ export function apply(ctx: ClientContext): void {
   font-family: var(--dsw-font-family, inherit);
   font-size: 12px; overflow: hidden; z-index: 2147483000;
 }
+.smn-panel-inner {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
+}
+.smn-grip-v {
+  flex: none; width: 14px; cursor: grab;
+  display: flex; align-items: center; justify-content: center;
+  user-select: none; -webkit-user-select: none; touch-action: none;
+}
+.smn-grip-v:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.05)); }
+.smn-grip-v:active { cursor: grabbing; }
+.smn-grip-v-dots {
+  width: 6px; height: 24px;
+  background-image: radial-gradient(circle, var(--dsw-alias-label-tertiary, #cbd5e1) 1.2px, transparent 1.8px);
+  background-size: 6px 6px; background-repeat: repeat-y; background-position: center top;
+  opacity: 0.55;
+}
+.smn-grip-v:hover .smn-grip-v-dots { opacity: 1; }
+.smn-grip-h {
+  flex: none; height: 12px; cursor: ns-resize;
+  display: flex; align-items: center; justify-content: center;
+  user-select: none; -webkit-user-select: none; touch-action: none;
+  border-top: 1px solid var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.06));
+}
+.smn-grip-h:hover { background: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.05)); }
+.smn-grip-h-bar {
+  width: 32px; height: 4px; border-radius: 2px;
+  background: var(--dsw-alias-label-tertiary, #cbd5e1); opacity: 0.55;
+}
+.smn-grip-h:hover .smn-grip-h-bar { opacity: 1; }
 .smn-panel-header {
   display: flex; align-items: center; gap: 8px; padding: 9px 12px;
   user-select: none; background: transparent;
@@ -72,19 +102,23 @@ export function apply(ctx: ClientContext): void {
 }
 .smn-row-main { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .smn-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+/* Running marker: rounded square with the same blue gradient sweep as the
+   chat TurnStatus indicator (deepseek-500 → 200 → 500 shimmer, 1.8s linear). */
 .smn-dot-running {
-  background: var(--dsw-static-deepseek-500, rgb(65, 118, 230));
-  animation: smn-pulse 1.2s ease-in-out infinite;
+  border-radius: 3px;
+  background: linear-gradient(90deg,
+    var(--dsw-static-deepseek-500, rgb(65, 118, 230)) 0%,
+    var(--dsw-static-deepseek-500, rgb(65, 118, 230)) 40%,
+    var(--dsw-static-deepseek-200, rgb(211, 226, 255)) 50%,
+    var(--dsw-static-deepseek-500, rgb(65, 118, 230)) 60%,
+    var(--dsw-static-deepseek-500, rgb(65, 118, 230)) 100%);
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  animation: smn-dot-shimmer 1.8s linear infinite;
 }
-@keyframes smn-pulse {
-  0%, 100% {
-    background: var(--dsw-static-deepseek-500, rgb(65, 118, 230));
-    box-shadow: 0 0 0 0 rgba(65, 118, 230, 0.45);
-  }
-  50% {
-    background: var(--dsw-static-deepseek-200, rgb(211, 226, 255));
-    box-shadow: 0 0 0 4px rgba(65, 118, 230, 0);
-  }
+@keyframes smn-dot-shimmer { to { background-position: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .smn-dot-running { animation: none; }
 }
 .smn-dot-ok { background: var(--dsw-alias-state-success-primary, #16a34a); }
 .smn-dot-error { background: var(--dsw-alias-state-error-primary, #dc2626); }

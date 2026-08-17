@@ -17,9 +17,9 @@
 Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style panel pinned to the **top-right** corner of the screen, showing the live run status of every subagent spawned from the current session.
 
 ```
-┌─ Running subagents ────────────── [Collapse ▴] [✕] ┐
+┌─ ⋮ Running subagents ────────────── [Collapse ▴] [✕] ┐
 │ ┌───────────────────────────────────────────────┐ │
-│ │ 🔵 Count TS files in ui dir        [Open chat] │ │
+│ │ 🟦 Count TS files in ui dir        [Open chat] │ │
 │ │    one-shot · 1a2b3c4d    running · 00:42     │ │
 │ └───────────────────────────────────────────────┘ │
 │ ┌───────────────────────────────────────────────┐ │
@@ -27,8 +27,11 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 │ │    spawn · 2b3c4d5e       done · 03:12        │ │
 │ └───────────────────────────────────────────────┘ │
 │  running 1 · done 1 · failed 0     [Clear done]  │
+│ ═══════════════════════════════════════════════ │ ← drag to resize
 └───────────────────────────────────────────────────┘
 ```
+
+> The left `⋮` grip moves the panel, the bottom `═` grip resizes it; both are remembered, double-click resets.
 
 ![Subagent monitor panel (running + done statuses)](docs/screenshot.png)
 
@@ -36,10 +39,12 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 
 | Feature | Description |
 | --- | --- |
-| 🟢 Live status | running (🔵 blue breathing dot + stopwatch), done, failed, interrupted, token limit, rejected |
+| 🟢 Live status | running (🟦 blue gradient-sweep square, same as the DSH chat indicator + stopwatch), done, failed, interrupted, token limit, rejected |
 | 🃏 Card list | one rounded card per subagent; **Open chat** on the right, status and elapsed time on the second line |
 | 🌲 Tree indent | grandchild subagents are indented to the right |
 | 🔙 One-click back | inside a subagent session, the panel shows a **← Main session** button |
+| 🖐 Movable | drag the left grip to move the panel; position is remembered, double-click resets |
+| 📏 Resizable | drag the bottom grip to resize the panel height; height is remembered, double-click resets |
 | 🔄 Refresh-proof | persistent composition row: the panel auto-recovers after page refresh / service restart |
 | 📱 Mobile-friendly | hidden by default at ≤768px viewport; the sidebar entry still opens it manually |
 
@@ -51,7 +56,7 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 dsh plugin --profile <your-profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
-> ✅ Published as `v0.1.0` (built and signed by GitHub Actions; SLSA provenance verifiable).
+> ✅ Published as `v0.2.0` (built and signed by GitHub Actions; SLSA provenance verifiable).
 
 ### Option B · Install from GitHub
 
@@ -89,7 +94,7 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 
 | Status | Meaning |
 | --- | --- |
-| 🔵 Running | in progress, blue breathing dot + live stopwatch |
+| 🟦 Running | in progress, blue gradient-sweep square (same as the DSH chat indicator) + live stopwatch |
 | 🟢 Done | the panel witnessed a successful finish; shows elapsed time |
 | ⚪ Ended | backfilled history row: created before a service restart, outcome not observed (success/failure unknown) |
 | 🔴 Failed | ended in error |
@@ -103,6 +108,8 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 
 **How much history does the panel keep?** At most 200 rows per root session; the oldest ended rows are evicted beyond that.
 
+**Are the panel position and height remembered?** Yes. They are persisted to localStorage on drag and restored after page reload / browser restart; double-click a grip to reset.
+
 **Is it safe?** The polling route `/api/subagent-monitor/snapshot` binds to the loopback address with no auth; recommended for local / intranet use only.
 
 ## 🌐 Ecosystem
@@ -115,7 +122,7 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 
 ## 📋 Changelog
 
-See [CHANGELOG.md](./CHANGELOG.md) for the full history. Current version **0.1.0** (aligned with `package.json`).
+See [CHANGELOG.md](./CHANGELOG.md) for the full history. Current version **0.2.0** (aligned with `package.json`).
 
 ## 📖 Architecture
 

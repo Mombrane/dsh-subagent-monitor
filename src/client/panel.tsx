@@ -5,7 +5,8 @@
  * everything without any model interaction.
  */
 import {
-  useEffect, useSyncExternalStore, type CSSProperties, type ReactElement,
+  useEffect, useRef, useSyncExternalStore,
+  type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactElement,
 } from 'react'
 import type { SessionId, SubagentAddress } from '@deepseek-ai/dsh-client-runtime/client'
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
@@ -126,6 +127,88 @@ function rowLabel(row: MonitorRow): string {
 
 const MOBILE_QUERY = '(max-width: 768px)'
 
+// ---- persisted panel layout (drag / resize survive reloads) ----
+
+interface PanelLayout {
+  left: number | null
+  top: number | null
+  height: number | null
+}
+
+const LAYOUT_KEY = 'dsh-smn.panel-layout.v1'
+const DEFAULT_TOP = 80
+const EDGE = 8
+const MIN_HEIGHT = 160
+
+const layout: PanelLayout = { left: null, top: null, height: null }
+let layoutLoaded = false
+
+function loadLayout(): void {
+  if (layoutLoaded) return
+  layoutLoaded = true
+  try {
+    const raw = window.localStorage.getItem(LAYOUT_KEY)
+    if (raw === null) return
+    const parsed = JSON.parse(raw) as Partial<PanelLayout>
+    if (typeof parsed.left === 'number' && Number.isFinite(parsed.left)) layout.left = parsed.left
+    if (typeof parsed.top === 'number' && Number.isFinite(parsed.top)) layout.top = parsed.top
+    if (typeof parsed.height === 'number' && Number.isFinite(parsed.height)) layout.height = parsed.height
+    // A half position makes no sense: fall back to the default corner anchor.
+    if (layout.left === null || layout.top === null) { layout.left = null; layout.top = null }
+  } catch {
+    // Corrupt layout: keep defaults.
+  }
+}
+
+function saveLayout(): void {
+  try {
+    window.localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout))
+  } catch {
+    // Storage unavailable: layout still lives for this page.
+  }
+}
+
+function clampLayout(): void {
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  if (layout.left !== null) layout.left = Math.min(Math.max(EDGE, layout.left), Math.max(EDGE, vw - 60))
+  if (layout.top !== null) layout.top = Math.min(Math.max(EDGE, layout.top), Math.max(EDGE, vh - 60))
+  if (layout.height !== null) {
+    const top = layout.top ?? DEFAULT_TOP
+    layout.height = Math.min(Math.max(MIN_HEIGHT, layout.height), Math.max(MIN_HEIGHT, vh - top - 16))
+  }
+}
+
+function applyLayoutStyle(el: HTMLElement): void {
+  if (layout.left !== null && layout.top !== null) {
+    el.style.left = `${layout.left}px`
+    el.style.top = `${layout.top}px`
+    el.style.right = 'auto'
+  } else {
+    el.style.left = 'auto'
+    el.style.top = `${DEFAULT_TOP}px`
+    el.style.right = '16px'
+  }
+  if (layout.height !== null) {
+    el.style.height = `${layout.height}px`
+    el.style.maxHeight = 'none'
+  } else {
+    el.style.height = ''
+    el.style.maxHeight = ''
+  }
+}
+
+function layoutStyle(): CSSProperties {
+  const style: CSSProperties = layout.left !== null && layout.top !== null
+    ? { left: `${layout.left}px`, top: `${layout.top}px` }
+    : { top: `${DEFAULT_TOP}px`, right: '16px' }
+  if (layout.height !== null) {
+    style.height = `${layout.height}px`
+    style.maxHeight = 'none'
+  }
+  return style
+}
+
 // ---- sidebar footer trigger ----
 
 type TriggerProps = PropsRuntime<'sidebar.footer.action'>
@@ -199,9 +282,89 @@ export function Panel(props: PanelProps): ReactElement | null {
   ).length
   const sessionId = monitor.sessionId
 
-  const style: CSSProperties = {
-    top: '80px',
-    right: '16px',
+  const panelRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    loadLayout()
+    clampLayout()
+    saveLayout()
+    const onResize = (): void => {
+      clampLayout()
+      if (panelRef.current !== null) applyLayoutStyle(panelRef.current)
+    }
+    window.addEventListener('resize', onResize)
+    return () => { window.removeEventListener('resize', onResize) }
+  }, [])
+
+  const style = layoutStyle()
+
+  // Left grip drags the panel; bottom grip resizes its height. Handlers write
+  // straight to the DOM node (no React state per pointermove — that was the
+  // lag source in the first drag attempt) and persist once on release.
+  const onMoveGripDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.button !== 0) return
+    const el = panelRef.current
+    const grip = event.currentTarget
+    if (el === null) return
+    const rect = el.getBoundingClientRect()
+    const offX = event.clientX - rect.left
+    const offY = event.clientY - rect.top
+    grip.setPointerCapture(event.pointerId)
+    const move = (ev: PointerEvent): void => {
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      layout.left = Math.min(Math.max(EDGE, ev.clientX - offX), Math.max(EDGE, vw - rect.width - EDGE))
+      layout.top = Math.min(Math.max(EDGE, ev.clientY - offY), Math.max(EDGE, vh - 60))
+      applyLayoutStyle(el)
+    }
+    const end = (): void => {
+      saveLayout()
+      grip.removeEventListener('pointermove', move)
+      grip.removeEventListener('pointerup', end)
+      grip.removeEventListener('pointercancel', end)
+    }
+    grip.addEventListener('pointermove', move)
+    grip.addEventListener('pointerup', end)
+    grip.addEventListener('pointercancel', end)
+  }
+
+  const resetPosition = (): void => {
+    layout.left = null
+    layout.top = null
+    saveLayout()
+    if (panelRef.current !== null) applyLayoutStyle(panelRef.current)
+  }
+
+  const onResizeGripDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    if (event.button !== 0) return
+    const el = panelRef.current
+    const grip = event.currentTarget
+    if (el === null) return
+    const rect = el.getBoundingClientRect()
+    const startH = rect.height
+    const startTop = rect.top
+    const startY = event.clientY
+    grip.setPointerCapture(event.pointerId)
+    const move = (ev: PointerEvent): void => {
+      const maxH = Math.max(MIN_HEIGHT, window.innerHeight - startTop - 16)
+      layout.height = Math.min(Math.max(MIN_HEIGHT, startH + (ev.clientY - startY)), maxH)
+      applyLayoutStyle(el)
+    }
+    const end = (): void => {
+      saveLayout()
+      grip.removeEventListener('pointermove', move)
+      grip.removeEventListener('pointerup', end)
+      grip.removeEventListener('pointercancel', end)
+    }
+    grip.addEventListener('pointermove', move)
+    grip.addEventListener('pointerup', end)
+    grip.addEventListener('pointercancel', end)
+  }
+
+  const resetHeight = (): void => {
+    layout.height = null
+    saveLayout()
+    if (panelRef.current !== null) applyLayoutStyle(panelRef.current)
   }
 
   const openChild = (row: MonitorRow): void => {
@@ -246,7 +409,20 @@ export function Panel(props: PanelProps): ReactElement | null {
   )
 
   if (monitor.minimized) {
-    return <div className="smn-panel" style={style}>{header}</div>
+    return (
+      <div className="smn-panel" style={style} ref={panelRef}>
+        <div
+          className="smn-grip-v"
+          title="拖动调整位置 · 双击复位"
+          aria-hidden="true"
+          onPointerDown={onMoveGripDown}
+          onDoubleClick={resetPosition}
+        >
+          <span className="smn-grip-v-dots" />
+        </div>
+        <div className="smn-panel-inner">{header}</div>
+      </div>
+    )
   }
 
   const rowsEl = visible.length === 0
@@ -323,10 +499,30 @@ export function Panel(props: PanelProps): ReactElement | null {
   )
 
   return (
-    <div className="smn-panel" style={style}>
-      {header}
-      {rowsEl}
-      {footer}
+    <div className="smn-panel" style={style} ref={panelRef}>
+      <div
+        className="smn-grip-v"
+        title="拖动调整位置 · 双击复位"
+        aria-hidden="true"
+        onPointerDown={onMoveGripDown}
+        onDoubleClick={resetPosition}
+      >
+        <span className="smn-grip-v-dots" />
+      </div>
+      <div className="smn-panel-inner">
+        {header}
+        {rowsEl}
+        {footer}
+        <div
+          className="smn-grip-h"
+          title="拖动调整高度 · 双击复位"
+          aria-hidden="true"
+          onPointerDown={onResizeGripDown}
+          onDoubleClick={resetHeight}
+        >
+          <span className="smn-grip-h-bar" />
+        </div>
+      </div>
     </div>
   )
 }

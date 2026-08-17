@@ -16,7 +16,8 @@
 > “此刻，我（这个会话里的 Agent）正在派哪些子代理？它们各自处于什么状态？”
 
 它在侧栏底部注册「子代理」入口（带运行中数量徽标），点击后在屏幕右上角
-打开固定面板。面板里每个子代理是一张独立卡片：蓝色呼吸圆点 + 秒表（运行中）、
+打开面板（v0.2 起可拖动、可调高）。面板里每个子代理是一张独立卡片：蓝色
+渐变扫光方块 + 秒表（运行中，与 DSH 会话框「思考中」指示器同款）、
 绿色对勾 + 耗时（完成）、红色叉（失败）、橙色状态（打断 / 令牌上限 / 拒绝），
 以及中性的「已结束」（历史回填、结局未观测）。最新派生的在最上面，孙代
 子代理向右缩进，卡片上「打开对话」可跳转到该子代理的会话。
@@ -25,7 +26,8 @@
 
 | 项 | 值 |
 | --- | --- |
-| 面板位置 | 固定，top:80px / right:16px，宽 340px |
+| 面板位置 | 默认右上角 top:80px / right:16px，宽 340px；左侧拖动柄可移动，位置记忆（localStorage） |
+| 面板高度 | 默认 max-height:min(560px, 100vh−160px)；底部拖动柄可调（最小 160px），高度记忆 |
 | 刷新频率 | 1 秒轮询（粗粒度 start/end 事件下足够“实时”） |
 | 历史保留 | 每个根会话最多 200 行，超出按最旧淘汰 |
 | 移动端 | ≤768px 默认不弹出（侧栏入口仍在） |
@@ -78,7 +80,7 @@ DSH 支持两种扩展：动态 Cordis 插件（`cordis_define`/`cordis_run`）�
 历史回填的行没有观测到结局事件，无法判定成功 / 失败。如实标注“已结束”
 优于猜测；状态图标为中性灰色圆点，提示“结局未观测”。
 
-### 2.6 为什么取消拖拽
+### 2.6 为什么取消拖拽（已被 §2.8 取代，2026-08-17）
 
 初版面板可拖动，但每次 `pointermove` 触发全面板 React 重渲染，在低性能
 机器上明显卡顿。改为固定位置后彻底根治；这也是 2.1 中“固定面板”的来源。
@@ -97,6 +99,28 @@ DSH 支持两种扩展：动态 Cordis 插件（`cordis_define`/`cordis_run`）�
     - id: ui-subagent-monitor
       name: '@leetoners/dsh-ui-subagent-monitor'
 ```
+
+### 2.8 为什么拖拽重新引入，但只用专用拖动柄 + 直改 DOM
+
+§2.6 的卡顿根因不是“拖拽”本身，而是**每个 `pointermove` 都走 React 状态
+重渲染**。v0.2 重新引入拖拽，但换了实现路径：
+
+- **专用拖动柄**：左侧竖向柄（移动面板位置）、底部横向柄（调整高度），
+  只有按住柄才触发，不再整面板响应；
+- **拖动期间直改 DOM**：`pointermove` 里直接写 `panel.style.left/top/height`，
+  不经过任何 React state——1s 轮询触发的常规重渲染会从模块级 `layout`
+  读出相同数值，无视觉跳变；
+- **释放时持久化**：位置 / 高度写入 `localStorage`（`dsh-smn.panel-layout.v1`），
+  刷新、关面板重开、重启浏览器后恢复；载入与窗口 resize 时钳制进视口；
+- **双击复位**：双击任一拖动柄清空对应布局，回到默认右上角 / 默认高度。
+
+### 2.9 为什么运行状态点改成“渐变扫光方块”
+
+会话框的「思考中」指示器（`TurnStatus`）用 deepseek 蓝渐变扫光：`500 → 200
+→ 500` 的 90° 渐变 + `background-size: 250%` + `background-position` 从
+100% 线性扫到 0，1.8s 循环。面板运行点原先的“圆形呼吸”是自创的近似，
+观感与会话框不一致；v0.2 改为**圆角方块 + 同款渐变扫光**，视觉语言与会话框
+对齐，并同样遵循 `prefers-reduced-motion`（弱动效偏好下静止显示渐变）。
 
 ---
 
@@ -209,8 +233,7 @@ dsh-subagent-monitor/
 - ✅ npm 发布 `@leetoners/dsh-ui-subagent-monitor`：v0.1.0 已上线（2026-08，
   GitHub Actions tag 触发 + SLSA provenance），
   `dsh plugin add @leetoners/dsh-ui-subagent-monitor` 一行安装；
-- GitHub Actions CI（typecheck + build 自动验证 PR）；
-- README 截图替换占位。
+- GitHub Actions CI（typecheck + build 自动验证 PR）。
 
 ### 5.3 生态收录
 
@@ -224,6 +247,9 @@ dsh-subagent-monitor/
 面板对齐 DSH 自身设计语言：
 
 - 弹层圆角 12px、阴影 `--dsw-shadow-lv3`、字体 `--dsw-font-family`；
-- 运行圆点使用 deepseek 蓝（`--dsw-static-deepseek-500` → `200`）呼吸动画，
-  与对话气泡的“思考中”节奏一致；
+- 运行状态点为圆角方块（3px），使用与会话框 TurnStatus 指示器同款的
+  deepseek 蓝渐变扫光（`--dsw-static-deepseek-500` → `200` → `500`，
+  1.8s linear），并遵循 `prefers-reduced-motion`；
+- 左侧 / 底部拖动柄用低对比度圆点列与短横条，悬停时加深，与卡片区
+  视觉分离；
 - 卡片背景与边框取自主题 token，自动适配浅色 / 深色主题。
