@@ -19,7 +19,6 @@ interface MonitorRow {
   id: string
   label?: string
   mode?: string
-  depth?: number
   parentId?: string
   runId?: string
   provider?: string
@@ -28,27 +27,53 @@ interface MonitorRow {
   endedAt?: number
   status: string
   sortKey?: number
+  /** Folded token accounting for this child, when the host reports any. */
+  usage?: MonitorUsage
+}
+
+/** Provider-neutral token accounting, mirroring the node half's UsageData. */
+interface MonitorUsage {
+  inputTokens: number
+  outputTokens: number
+  cacheReadTokens: number
+  cacheWriteTokens: number
+  contextTokens: number
+  toolOutputTokens: number
+  contextWindow?: number
+  pressureTokens?: number
+  /** Current context occupancy: newest sample plus surface movement since. */
+  projectedTokens?: number
 }
 
 interface SnapshotPayload {
   sessionId?: string
   now?: number
   rows?: MonitorRow[]
+  /** The viewed (main) session's own usage/context, folded by the host. */
+  main?: MonitorUsage
 }
 
 // ---- page-local store (one instance per page) ----
+
+/**
+ * Panel collapse depth. Two-stage collapse: the header「收起」button first
+ * hides only the subagent card list ('rows', the overview summary stays),
+ * then collapses everything down to the header ('all').
+ */
+type CollapseLevel = 'none' | 'rows' | 'all'
 
 interface MonitorState {
   sessionId: string | undefined
   now: number
   rows: MonitorRow[]
+  main: MonitorUsage | undefined
   open: boolean
-  minimized: boolean
+  collapse: CollapseLevel
   hidden: string[]
 }
 
 const listeners = new Set<() => void>()
-let state: MonitorState = { sessionId: undefined, now: Date.now(), rows: [], open: false, minimized: false, hidden: [] }
+let state: MonitorState = { sessionId: undefined, now: Date.now(), rows: [], main: undefined, open: false, collapse: 'none', hidden: [] }
 let autoOpened = false
 let polling = false
 
@@ -69,7 +94,7 @@ async function refresh(sessionId: string): Promise<void> {
     const res = await fetch(`/api/subagent-monitor/snapshot?sessionId=${encodeURIComponent(sessionId)}`)
     const data = await res.json() as SnapshotPayload
     if (data.sessionId !== state.sessionId) return
-    commit({ rows: data.rows ?? [], now: data.now ?? Date.now() })
+    commit({ rows: data.rows ?? [], main: data.main, now: data.now ?? Date.now() })
   } catch {
     // Transient network failure: the next tick retries.
   }
@@ -164,6 +189,209 @@ function rowLabel(row: MonitorRow): string {
   return `子代理 ${shortId(row.id)}`
 }
 
+const fmtTokens = (n: number): string => {
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000
+    return `${m >= 10 ? m.toFixed(1) : m.toFixed(2)}M`
+  }
+  if (n >= 1_000) {
+    const k = n / 1_000
+    return `${k >= 100 ? Math.round(k) : k.toFixed(1)}k`
+  }
+  return String(n)
+}
+
+const fmtPct = (n: number): string => `${Math.round(n * 100)}%`
+
+/** Cache-hit share of prompt tokens for one usage record. */
+function usageHitRate(usage: MonitorUsage): string {
+  const prompt = usage.inputTokens + usage.cacheReadTokens
+  return prompt > 0 ? fmtPct(usage.cacheReadTokens / prompt) : '—'
+}
+
+/** Context-window utilization of the current occupancy, when both are known. */
+function usageUtilization(usage: MonitorUsage): string {
+  const used = usage.projectedTokens ?? usage.pressureTokens
+  if (used === undefined || usage.contextWindow === undefined || usage.contextWindow <= 0) return ''
+  return fmtPct(used / usage.contextWindow)
+}
+// ---- summary donuts: two cache rings (uncached / cached / output) plus the
+// ---- main session's context-window ring (input / tool output / output).
+
+const RING_SIZE = 52
+const RING_RADIUS = 20
+const RING_STROKE = 6
+const RING_GAP = 1.5
+
+/**
+ * Pure-SVG cache donut for the summary strip. One ring, three segments — the
+ * prompt side split into uncached input vs cache-hit input, plus output —
+ * with the cache-hit rate in the center. Zero dependency, matching the
+ * panel's hand-rolled SVG approach. The stroke-dasharray trick places each
+ * arc clockwise from 12 o'clock; a tiny gap separates the segments. `size`
+ * scales the geometry (the two small cache rings use 34).
+ */
+function RingChart(props: {
+  uncachedInput: number
+  cachedInput: number
+  output: number
+  hitRate: number | undefined
+  size?: number
+}): ReactElement {
+  const size = props.size ?? RING_SIZE
+  const radius = RING_RADIUS * (size / RING_SIZE)
+  const stroke = RING_STROKE * (size / RING_SIZE)
+  const gap = RING_GAP * (size / RING_SIZE)
+  const segments = [
+    { value: props.uncachedInput, cls: 'smn-ring-seg-uncached' },
+    { value: props.cachedInput, cls: 'smn-ring-seg-cached' },
+    { value: props.output, cls: 'smn-ring-seg-output' },
+  ]
+  const total = segments.reduce((acc, seg) => acc + seg.value, 0)
+  const hasData = total > 0
+  const c = size / 2
+  const circ = 2 * Math.PI * radius
+  const visible = segments.filter(seg => seg.value > 0)
+  const usable = hasData ? circ - gap * visible.length : 0
+  let acc = 0
+  return (
+    <svg
+      className={'smn-ring' + (size < RING_SIZE ? ' smn-ring-sm' : '')}
+      width={size}
+      height={size}
+      viewBox={'0 0 ' + size + ' ' + size}
+      role="img"
+      aria-label={props.hitRate !== undefined
+        ? '模型用量构成，缓存命中率 ' + Math.round(props.hitRate * 100) + '%'
+        : '模型用量构成，无用量数据'}
+    >
+      <circle className="smn-ring-bg" cx={c} cy={c} r={radius} fill="none" strokeWidth={stroke} />
+      <g transform={'rotate(-90 ' + c + ' ' + c + ')'}>
+        {hasData ? visible.map(seg => {
+          const len = (seg.value / total) * usable
+          const el = (
+            <circle
+              key={seg.cls}
+              className={'smn-ring-seg ' + seg.cls}
+              cx={c}
+              cy={c}
+              r={radius}
+              fill="none"
+              strokeWidth={stroke}
+              strokeDasharray={Math.max(0, len - gap) + ' ' + circ}
+              strokeDashoffset={-acc}
+            />
+          )
+          acc += len
+          return el
+        }) : null}
+      </g>
+      <text
+        className="smn-ring-pct"
+        x={c}
+        y={c - size * 0.02}
+        textAnchor="middle"
+        dominantBaseline="central"
+      >
+        {props.hitRate !== undefined ? Math.round(props.hitRate * 100) + '%' : '—'}
+      </text>
+      {hasData
+        ? (
+          <text
+            className="smn-ring-label"
+            x={c}
+            y={c + size * 0.18}
+            textAnchor="middle"
+            dominantBaseline="central"
+          >
+            缓存
+          </text>
+        )
+        : null}
+    </svg>
+  )
+}
+
+/**
+ * Main-session context-window ring. The ring's circumference is the model
+ * context window (when the route advertises one); the filled arc is the
+ * CURRENT context occupancy — what the next request's prompt would cost,
+ * folded from the newest provider usage sample plus the heuristic surface
+ * movement since (a compaction shadow shrinks it the moment content is
+ * replaced, so the ring drops after compression). Center shows occupancy as
+ * a percentage of the window. With no contextWindow the ring fills on the
+ * used figure instead.
+ */
+function ContextRing(props: { usage: MonitorUsage | undefined; size?: number }): ReactElement {
+  const u = props.usage
+  // projectedTokens is the occupancy figure (per the token-meter's contract);
+  // fall back to the newest prompt sample, then to the cumulative figure for
+  // hosts that predate the projection.
+  const used = u?.projectedTokens ?? u?.pressureTokens ?? u?.contextTokens ?? 0
+  const cap = u?.contextWindow
+  const total = cap !== undefined && cap > 0 ? cap : used
+  const hasData = used > 0
+  const size = props.size ?? 56
+  const radius = size * (22 / 56)
+  const stroke = size * (7 / 56)
+  const gap = 1.5
+  const c = size / 2
+  const circ = 2 * Math.PI * radius
+  const frac = total > 0 ? Math.min(1, used / total) : 0
+  const usable = hasData && total > 0 ? circ - gap : 0
+  return (
+    <svg
+      className="smn-ring smn-ctx"
+      width={size}
+      height={size}
+      viewBox={'0 0 ' + size + ' ' + size}
+      role="img"
+      aria-label={hasData && total > 0
+        ? '主会话上下文，当前 ' + Math.round(frac * 100) + '% 窗口'
+        : '主会话上下文，无用量数据'}
+    >
+      <circle className="smn-ring-bg" cx={c} cy={c} r={radius} fill="none" strokeWidth={stroke} />
+      <g transform={'rotate(-90 ' + c + ' ' + c + ')'}>
+        {hasData && total > 0
+          ? (
+            <circle
+              className="smn-ring-seg smn-ctx-seg-input"
+              cx={c}
+              cy={c}
+              r={radius}
+              fill="none"
+              strokeWidth={stroke}
+              strokeDasharray={Math.max(0, (frac * usable) - gap) + ' ' + circ}
+            />
+          )
+          : null}
+      </g>
+      <text
+        className="smn-ring-pct"
+        x={c}
+        y={c - 1}
+        textAnchor="middle"
+        dominantBaseline="central"
+      >
+        {hasData && total > 0 ? Math.round(frac * 100) + '%' : '—'}
+      </text>
+      {hasData
+        ? (
+          <text
+            className="smn-ring-label"
+            x={c}
+            y={c + size * 0.18}
+            textAnchor="middle"
+            dominantBaseline="central"
+          >
+            窗口
+          </text>
+        )
+        : null}
+    </svg>
+  )
+}
+
 const MOBILE_QUERY = '(max-width: 768px)'
 
 // ---- persisted panel layout (drag / resize survive reloads) ----
@@ -180,7 +408,11 @@ const POSITION_KEY = 'dsh-smn.panel-position.v1'
 const HEIGHT_KEY_PREFIX = 'dsh-smn.panel-height.v2.'
 const DEFAULT_TOP = 80
 const EDGE = 8
-const MIN_HEIGHT = 160
+// The resize floor must clear the empty state's natural content height
+// (header + summary + empty + footer + grip ≈ 226px): a lower floor clips the
+// footer and the bottom height grip out of the panel (overflow: hidden), so a
+// fully shrunk panel loses the grip it needs to grow again.
+const MIN_HEIGHT = 240
 
 const heights = new Map<string, number | null>()
 let heightKey = ''
@@ -258,7 +490,7 @@ function clampLayout(): void {
   }
 }
 
-function applyLayoutStyle(el: HTMLElement, minimized = false): void {
+function applyLayoutStyle(el: HTMLElement, collapsed = false): void {
   if (layout.left !== null && layout.top !== null) {
     el.style.left = `${layout.left}px`
     el.style.top = `${layout.top}px`
@@ -268,9 +500,10 @@ function applyLayoutStyle(el: HTMLElement, minimized = false): void {
     el.style.top = `${DEFAULT_TOP}px`
     el.style.right = '16px'
   }
-  // A minimized panel collapses to its header: the remembered height only
-  // applies while expanded, and returns when the panel expands again.
-  if (layout.height !== null && !minimized) {
+  // A collapsed panel (cards hidden or fully minimized) shrinks to its
+  // content: the remembered height only applies while fully expanded, and
+  // returns when the panel expands again.
+  if (layout.height !== null && !collapsed) {
     el.style.height = `${layout.height}px`
     el.style.maxHeight = 'none'
   } else {
@@ -279,11 +512,11 @@ function applyLayoutStyle(el: HTMLElement, minimized = false): void {
   }
 }
 
-function layoutStyle(minimized = false): CSSProperties {
+function layoutStyle(collapsed = false): CSSProperties {
   const style: CSSProperties = layout.left !== null && layout.top !== null
     ? { left: `${layout.left}px`, top: `${layout.top}px` }
     : { top: `${DEFAULT_TOP}px`, right: '16px' }
-  if (layout.height !== null && !minimized) {
+  if (layout.height !== null && !collapsed) {
     style.height = `${layout.height}px`
     style.maxHeight = 'none'
   }
@@ -331,7 +564,7 @@ export function Trigger(props: TriggerProps): ReactElement {
 
   const running = monitor.rows.filter(row => row.status === 'running').length
   return (
-    <button className="smn-trigger" type="button" title="运行中的子代理" onClick={() => commit({ open: !state.open })}>
+    <button className="smn-trigger" type="button" title="子代理看板" onClick={() => commit({ open: !state.open })}>
       <span className="smn-trigger-label">子代理</span>
       {running > 0 ? <span className="smn-trigger-badge">{running}</span> : null}
     </button>
@@ -351,16 +584,16 @@ export function Panel(props: PanelProps): ReactElement | null {
   // Hooks MUST run before the early return below: React #310 (more hooks than
   // the previous render) otherwise crashes the slot when the panel opens.
   const panelRef = useRef<HTMLDivElement | null>(null)
-  // Mirrors the minimized state for the mount-only resize listener below,
+  // Mirrors the collapse state for the mount-only resize listener below,
   // whose closure would otherwise capture the first render's value.
-  const minimizedRef = useRef(monitor.minimized)
-  minimizedRef.current = monitor.minimized
+  const collapsedRef = useRef(monitor.collapse !== 'none')
+  collapsedRef.current = monitor.collapse !== 'none'
 
   useEffect(() => {
     clampLayout()
     const onResize = (): void => {
       clampLayout()
-      if (panelRef.current !== null) applyLayoutStyle(panelRef.current, minimizedRef.current)
+      if (panelRef.current !== null) applyLayoutStyle(panelRef.current, collapsedRef.current)
     }
     window.addEventListener('resize', onResize)
     return () => { window.removeEventListener('resize', onResize) }
@@ -368,11 +601,11 @@ export function Panel(props: PanelProps): ReactElement | null {
 
   // React's style diff cannot clear styles the drag handlers mutated directly
   // on the DOM: the last rendered style object never contained them, so a
-  // minimize re-render sees "no diff" and leaves e.g. the dragged height on
-  // the collapsed box. Reconcile imperatively when minimized flips.
+  // collapse re-render sees "no diff" and leaves e.g. the dragged height on
+  // the collapsed box. Reconcile imperatively when collapse flips.
   useEffect(() => {
-    if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.minimized)
-  }, [monitor.minimized])
+    if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.collapse !== 'none')
+  }, [monitor.collapse])
 
   if (!monitor.open) return null
 
@@ -395,7 +628,46 @@ export function Panel(props: PanelProps): ReactElement | null {
   ).length
   const sessionId = monitor.sessionId
 
-  const style = layoutStyle(monitor.minimized)
+  // Overall dashboard: totals across usage-bearing rows plus the hottest
+  // context-window utilization.
+  const usageRows = visible.filter((row): row is MonitorRow & { usage: MonitorUsage } => row.usage !== undefined)
+  const totals = usageRows.reduce(
+    (acc, row) => ({
+      inputTokens: acc.inputTokens + row.usage.inputTokens,
+      outputTokens: acc.outputTokens + row.usage.outputTokens,
+      cacheReadTokens: acc.cacheReadTokens + row.usage.cacheReadTokens,
+      cacheWriteTokens: acc.cacheWriteTokens + row.usage.cacheWriteTokens,
+      contextTokens: acc.contextTokens + row.usage.contextTokens,
+    }),
+    { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, contextTokens: 0 },
+  )
+  const cacheHitRate = totals.inputTokens + totals.cacheReadTokens > 0
+    ? totals.cacheReadTokens / (totals.inputTokens + totals.cacheReadTokens)
+    : undefined
+  const main = monitor.main
+  const mainHitRate = main !== undefined && main.inputTokens + main.cacheReadTokens > 0
+    ? main.cacheReadTokens / (main.inputTokens + main.cacheReadTokens)
+    : undefined
+
+  // Status histogram on the summary's right: the same running / completed /
+  // failed counts as the footer, drawn as color-coded vertical bars instead
+  // of duplicated text. Heights scale to the largest count so a lone run
+  // still reads clearly.
+  const statusMax = Math.max(running, done, failed, 1)
+  const statusBar = (count: number, cls: string, label: string): ReactElement => (
+    <div className="smn-bar">
+      <div className="smn-bar-track">
+        <div
+          className={'smn-bar-fill ' + cls}
+          style={{ height: `${(count / statusMax) * 100}%` }}
+        />
+      </div>
+      <b className="smn-bar-count">{count}</b>
+      <span className="smn-bar-label">{label}</span>
+    </div>
+  )
+
+  const style = layoutStyle(monitor.collapse !== 'none')
 
   // Left grip drags the panel; bottom grip resizes its height. Handlers write
   // straight to the DOM node (no React state per pointermove — that was the
@@ -416,7 +688,7 @@ export function Panel(props: PanelProps): ReactElement | null {
       const vh = window.innerHeight
       layout.left = Math.min(Math.max(EDGE, ev.clientX - offX), Math.max(EDGE, vw - rect.width - EDGE))
       layout.top = Math.min(Math.max(EDGE, ev.clientY - offY), Math.max(EDGE, vh - 60))
-      applyLayoutStyle(el, monitor.minimized)
+      applyLayoutStyle(el, monitor.collapse !== 'none')
     }
     const end = (): void => {
       savePosition()
@@ -433,7 +705,7 @@ export function Panel(props: PanelProps): ReactElement | null {
     layout.left = null
     layout.top = null
     savePosition()
-    if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.minimized)
+    if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.collapse !== 'none')
   }
 
   const onResizeGripDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
@@ -464,13 +736,16 @@ export function Panel(props: PanelProps): ReactElement | null {
   const resetHeight = (): void => {
     layout.height = null
     saveHeight()
-    if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.minimized)
+    if (panelRef.current !== null) applyLayoutStyle(panelRef.current, monitor.collapse !== 'none')
   }
 
   const openChild = (row: MonitorRow): void => {
     if (sessionsSvc === undefined || monitor.sessionId === undefined || row.mode === undefined) return
+    // The direct parent is the authority the address needs. Every row is a
+    // direct child of the viewed session, but reading parentId keeps that an
+    // explicit fact rather than an assumption a future tree view would break.
     const address: SubagentAddress = {
-      parentSessionId: monitor.sessionId as SessionId,
+      parentSessionId: (row.parentId ?? monitor.sessionId) as SessionId,
       childSessionId: row.id as SessionId,
       mode: row.mode as 'one-shot' | 'continuable',
     }
@@ -493,16 +768,16 @@ export function Panel(props: PanelProps): ReactElement | null {
           <path d="M11.2 6 8.4 4.7V7.3Z" />
         </svg>
       </div>
-      <span className="smn-panel-title">运行中的子代理</span>
+      <span className="smn-panel-title">子代理看板</span>
       {subagentParent !== undefined && sessionsSvc !== undefined
         ? (
           <button
             className="smn-btn smn-back"
             type="button"
-            title="返回主会话"
+            title="返回上一层会话"
             onClick={() => sessionsSvc?.open(subagentParent as SessionId)}
           >
-            ← 主会话
+            ← 上一层
           </button>
         )
         : null}
@@ -511,10 +786,13 @@ export function Panel(props: PanelProps): ReactElement | null {
       <button
         className="smn-btn"
         type="button"
-        title={monitor.minimized ? '展开面板' : '收起面板'}
-        onClick={() => commit({ minimized: !state.minimized })}
+        title={monitor.collapse === 'none' ? '收起子代理卡片，保留总览' : monitor.collapse === 'rows' ? '全部收起，仅留标题栏' : '展开面板'}
+        onClick={() => {
+          const next: CollapseLevel = monitor.collapse === 'none' ? 'rows' : monitor.collapse === 'rows' ? 'all' : 'none'
+          commit({ collapse: next })
+        }}
       >
-        {monitor.minimized ? '展开 ▾' : '收起 ▴'}
+        {monitor.collapse === 'none' ? '收起 ▴' : monitor.collapse === 'rows' ? '全部收起 ▴' : '展开 ▾'}
       </button>
       <button className="smn-btn" type="button" title="关闭" onClick={() => commit({ open: false })}>
         ✕
@@ -522,7 +800,45 @@ export function Panel(props: PanelProps): ReactElement | null {
     </div>
   )
 
-  if (monitor.minimized) {
+  const summaryEl = (
+    <div className="smn-summary">
+      <div className="smn-summary-left">
+        <div className="smn-summary-rings">
+          <div className="smn-ring-item">
+            <ContextRing usage={main} size={48} />
+            <span className="smn-ring-caption">上下文</span>
+          </div>
+          <div className="smn-ring-item">
+            <RingChart
+              size={48}
+              uncachedInput={main?.inputTokens ?? 0}
+              cachedInput={main?.cacheReadTokens ?? 0}
+              output={main?.outputTokens ?? 0}
+              hitRate={mainHitRate}
+            />
+            <span className="smn-ring-caption">主会话</span>
+          </div>
+          <div className="smn-ring-item">
+            <RingChart
+              size={48}
+              uncachedInput={totals.inputTokens}
+              cachedInput={totals.cacheReadTokens}
+              output={totals.outputTokens}
+              hitRate={cacheHitRate}
+            />
+            <span className="smn-ring-caption">子代理</span>
+          </div>
+        </div>
+      </div>
+      <div className="smn-chart">
+        {statusBar(running, 'smn-bar-running', '运行')}
+        {statusBar(done, 'smn-bar-ok', '完成')}
+        {statusBar(failed, 'smn-bar-err', '异常')}
+      </div>
+    </div>
+  )
+
+  if (monitor.collapse === 'all') {
     return (
       <div className="smn-panel" style={style} ref={panelRef}>
         {header}
@@ -543,14 +859,12 @@ export function Panel(props: PanelProps): ReactElement | null {
           const elapsed = row.status === 'running'
             ? fmtDuration(row.startedAt, state.now)
             : fmtDuration(row.startedAt, row.endedAt)
-          const depth = typeof row.depth === 'number' ? row.depth : 1
-          const indent = Math.max(0, depth - 1) * 14
           const modeText = row.mode === 'continuable' ? '连续对话' : row.mode === 'one-shot' ? '一次性' : ''
           const metaLine = [row.provider, modeText, shortId(row.id)]
             .filter(value => typeof value === 'string' && value !== '')
             .join(' · ')
           return (
-            <div key={row.id} className="smn-row" style={{ marginLeft: indent }}>
+            <div key={row.id} className="smn-row">
               <div className="smn-row-main">
                 <StatusDot status={row.status} />
                 <span className="smn-row-label" title={rowLabel(row)}>{rowLabel(row)}</span>
@@ -568,6 +882,16 @@ export function Panel(props: PanelProps): ReactElement | null {
                   {row.status === 'running' ? `${elapsed} · ${meta.label}` : `${meta.label} · ${elapsed}`}
                 </span>
               </div>
+              {row.usage !== undefined
+                ? (
+                  <div className="smn-row-usage">
+                    <span>↑{fmtTokens(row.usage.inputTokens)} ↓{fmtTokens(row.usage.outputTokens)}</span>
+                    <span>缓存 {usageHitRate(row.usage)}</span>
+                    <span>上下文 {fmtTokens(row.usage.contextTokens)}</span>
+                    {usageUtilization(row.usage) !== '' ? <span>窗口 {usageUtilization(row.usage)}</span> : null}
+                  </div>
+                )
+                : null}
             </div>
           )
         })}
@@ -606,7 +930,10 @@ export function Panel(props: PanelProps): ReactElement | null {
   return (
     <div className="smn-panel" style={style} ref={panelRef}>
       {header}
-      {rowsEl}
+      {summaryEl}
+      {/* Stage-one collapse hides only the subagent cards; the overview
+          summary, the status footer and the height grip stay. */}
+      {monitor.collapse !== 'rows' ? rowsEl : null}
       {footer}
       <div
         className="smn-grip-h"

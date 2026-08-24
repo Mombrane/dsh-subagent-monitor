@@ -20,8 +20,13 @@
 蓝色像素追逐状态点 + 秒表（运行中）、绿色状态点 + 耗时（完成）、红色
 状态点（失败）、琥珀状态点（打断 / 令牌上限 / 拒绝），以及中性的
 「已结束」（历史回填、结局未观测）——状态点均对齐 DSH 侧栏 tab 的
-StateDot 规格（终态为实心点 + 10% 同色光晕）。最新派生的在最上面，孙代
-子代理向右缩进，卡片上「打开对话」可跳转到该子代理的会话。
+StateDot 规格（终态为实心点 + 10% 同色光晕）。面板只显示当前会话**直接**
+派生的子代理，最新派生的在最上面；打开其中一项后，面板切换为展示该子代理
+直接派生的下一层，卡片上「打开对话」可跳转到对应会话。
+
+面板顶部是一块总体监控看板，聚合当前层所有子代理的运行 / 完成 / 异常计数与
+模型用量（输入 / 输出 token）、缓存命中率、累计上下文与上下文窗口峰值利用率；
+每张卡片下方另附一行用量明细（该 run 的输入 / 输出、缓存命中、上下文大小）。
 
 ### 关键数字
 
@@ -30,7 +35,8 @@ StateDot 规格（终态为实心点 + 10% 同色光晕）。最新派生的在�
 | 面板位置 | 默认右上角 top:80px / right:16px，宽 340px；标题左侧拖动柄可移动，位置记忆（localStorage，跨会话保留） |
 | 面板高度 | 默认 max-height:min(560px, 100vh−160px)；底部拖动柄可调（最小 160px），高度记忆（按会话隔离） |
 | 刷新频率 | 1 秒轮询（粗粒度 start/end 事件下足够“实时”） |
-| 历史保留 | 每个根会话最多 200 行，超出按最旧淘汰 |
+| 历史保留 | 每个直接父会话最多 200 行，超出按最旧淘汰 |
+| 用量采集 | 从子代理会话日志折叠 provider TokenUsage（活会话内存 / 冷会话持久化一次并缓存） |
 | 移动端 | ≤768px 默认不弹出（侧栏入口仍在） |
 
 ---
@@ -57,7 +63,7 @@ DSH 支持两种扩展：动态 Cordis 插件（`cordis_define`/`cordis_run`）�
 选了后者。路由直接挂到 DSH Web 服务端口下（回环 `127.0.0.1`），浏览器端
 `fetch` 同源即可，不引入 CORS。
 
-### 2.3 为什么事件要“全局监听 + 父链归因”
+### 2.3 为什么事件要“全局监听 + 父链归因”（已被 §2.11 取代，2026-08-17）
 
 `subagent/start` 与 `subagent/end` 事件按**委托方（父会话）的作用域**分发：
 谁派生的，事件在谁的组合作用域里可见。而本插件挂在根组合上（不属于任何
@@ -67,7 +73,7 @@ DSH 支持两种扩展：动态 Cordis 插件（`cordis_define`/`cordis_run`）�
 `session.header.parentSession` 父链，把事件归因到最顶层（根）会话。
 面板只展示“当前会话的森林”，而不是整个进程的噪声。
 
-### 2.4 为什么事件要合并 `subagents.listDescendants`
+### 2.4 为什么事件要合并 `subagents.listDescendants`（已被 §2.11 取代，2026-08-17）
 
 - 事件载荷里没有 label、mode、depth 等展示字段，持久化目录里有；
 - 服务重启后内存事件仓库清空，但子代理记录在持久目录里——合并它
@@ -121,8 +127,10 @@ DSH 支持两种扩展：动态 Cordis 插件（`cordis_define`/`cordis_run`）�
   `__global__` 桶——切换会话换桶，面板大小互不影响）。载入与窗口 resize
   时钳制进视口；
 - **双击复位**：双击任一拖动柄清空对应布局，回到默认右上角 / 默认高度；
-- **最小化收起高度**：minimized 状态下不套用显式高度（面板缩回标题栏），
-  展开时恢复记忆高度；minimized 翻转时命令式同步一次样式——React 的
+- **两段式收起高度**：`collapse` 为三态（`none` 完整面板 / `rows` 只收起子
+  代理卡片、顶部总览看板保留 / `all` 收起到只剩标题栏）。任一收起态
+  （`rows` / `all`）都不套用显式记忆高度，面板自动收缩到内容高度；展开回
+  `none` 时恢复记忆高度；collapse 翻转时命令式同步一次样式——React 的
   style diff 无法清除拖动期间直改 DOM 的样式键（上一次渲染的 style 对象
   里根本没有这些键，diff 视为"无变化"）。
 
@@ -148,6 +156,65 @@ DSH 前端后发现，与**左侧 tab 栏**（会话/子代理列表）的原生
 - 终态 = 点 + 光晕（`::before` 10% 同色 + `::after` 6/10 实心核），颜色
   走同一组 `--dsw-alias-state-*` token（完成绿 / 警告琥珀 / 错误红）；
 - 「已结束」回填行沿用该形态的灰点（DSH tab 无此态，保留中性标记）。
+
+---
+
+### 2.11 为什么只展示当前会话的直接子代理
+
+初版沿 `parentSession` 父链把事件归到根会话，并合并
+`subagents.listDescendants`，因此主会话面板会显示整棵递归子树。子代理继续
+派生时，孙代卡片也会混入主会话的列表；这既拉长了面板，也让“当前会话正在派谁”
+的语义变得不清晰。
+
+改为按**直接父会话**归因：
+
+- 事件仓库按子代理 `header.parentSession` 的一跳父会话分区；
+- 历史回填改用 `subagents.listChildren(sessionId)`，天然不枚举孙代；
+- 面板只显示当前会话直接委托的子代理。打开一张卡片进入子代理会话后，面板
+  自动展示该会话自己的直接子代理，形成明确的逐层下钻；
+- `parentId` 仍通过 wire payload 保留，`openSubagent` 与后续 interrupt
+  操作始终使用直接父会话地址。
+
+这使面板的统计、容量上限和操作授权都以同一条直接父子关系为准。
+
+### 2.12 为什么用量从子代理会话日志折叠（而不是事件 / 目录）
+
+v0.2 的看板只有运行状态，用户需要更进一步的「整体看板」：模型用量、上下文
+大小与缓存命中。DSH 的三个候选数据源里：
+
+- **`subagent/end` 事件**：只有 `stopReason` 与可选 `lastAssistantMessage`，
+  不带任何用量字段（调研见 `dsh-host-subagent-api-report.md`）。
+- **`listChildren` / `listDescendants` 目录**：只有 label / mode / activity /
+  hasChildren，同样没有 token 数据。
+- **子代理会话日志**：`assistant/message` 事件携带 `usage?: TokenUsage`
+  （inputTokens / outputTokens / cacheReadTokens / cacheWriteTokens），
+  `request/context` 携带 `contextWindow`，且全部随日志持久化。
+
+结论：用量只能从每个子代理自己的会话日志折叠。实现自包含复刻
+`@deepseek-ai/dsh-token-meter` 的 tokenUsage + contextPressure 投影（同 step
+的 usage chunk 与最终 message 用量去重、prompt 侧压力 = input + cacheRead +
+cacheWrite），不引入对该包的依赖；活会话读 `ctx.sessions.get(id).events`
+（内存，增量折叠），冷会话经可选 `sessionPersistence` 的 `inspect` 读取一次并
+缓存（按事件水位推进，之后每次轮询 O(1)）。这使看板在服务重启、历史回填后仍能
+还原用量；缺失可选服务或适配器未上报时优雅降级为「无用量」。
+
+### 2.13 上下文环显示「当前占用」而非会话累计（2026-08-21）
+
+上下文窗口的语义是**当前**占用——下一个请求的 prompt 会花多少，而不是会话累计
+喂过多少。早期实现把累计的 `contextTokens`（input + cacheRead + cacheWrite
+逐请求累加）当环的分子，随会话只增不减，长会话或压缩场景下必然贴死 100%；
+「压缩了还是 100%」就是该口径的直接后果——压缩只腾出**当前**上下文，清不掉累计
+计数器。
+
+修法对齐 token-meter 的 `contextPressure.projectedTokens`：分子 =
+`max(0, 最新 prompt 样本 + 表层启发式增减)`。表层增减走与主仓相同的 shadow-price
+协议——`compaction/summary` 按 `shadowedTokenCount` 武装一条索赔，紧随其后的
+surface `replace` 事件消费该索赔并扣减表层总价，因此压缩替换旧区间的那一刻占用
+立即回落（复放真实日志验证：旧口径 1009% → 新口径 10.6%）。
+
+`contextTokens` 仍随 payload 下发，供「上下文」数字单元格 / 卡片行的**累计**
+口径使用；窗口环与「窗口」利用率统一读 `projectedTokens`（缺省回退
+`pressureTokens`，再回退累计值以兼容旧宿主）。
 
 ---
 
@@ -181,16 +248,17 @@ DSH 前端后发现，与**左侧 tab 栏**（会话/子代理列表）的原生
 ### 3.2 数据流（一条子代理的一生）
 
 1. 某个会话里的 Agent 派生子代理 → 触发 `subagent/start`；
-2. Node 半身（全局监听）收到事件，沿 `parentSession` 链归因到根会话；
+2. Node 半身（全局监听）收到事件，读取子会话 `parentSession`，归因到直接父会话；
 3. 写入事件仓库（按 runId 分区，`startedAt` 记录起始时间）；
 4. 子代理结束 → `subagent/end` 到达，仓库中该 runId 标记终态与耗时；
-5. 浏览器半身每秒轮询 `/api/subagent-monitor/snapshot?sessionId=<根会话>`；
-6. Node 半身 `enrich()`：事件仓库（实时）⊕ `subagents.listDescendants`
-   （label/mode/depth + 重启回填）→ 最新优先 → 截断 200 行 → `clean()`
-   剥离 `undefined` 后序列化返回；
+5. 浏览器半身每秒轮询 `/api/subagent-monitor/snapshot?sessionId=<当前会话>`；
+6. Node 半身 `enrich()`：当前会话的直接子代理事件（实时）⊕
+   `subagents.listChildren`（label/mode + 重启回填）→ 最新优先 → 截断 200 行 →
+   对每个子代理折叠会话日志中的 TokenUsage（活会话内存 / 冷会话持久化一次并缓存）
+   → 条件展开省略 `undefined` 字段后序列化返回；
 7. 面板以 `useSyncExternalStore` 订阅模块级 store，重渲染卡片列表；
 8. 用户点击「打开对话」→ 经 `useSessions` 拿到会话快照，路由跳转；
-   面板随后显示「← 主会话」返回按钮。
+   面板随后显示「← 上一层」返回按钮（跳回直接父会话）。
 
 ### 3.3 目录结构
 
@@ -218,17 +286,30 @@ dsh-subagent-monitor/
 
 ### 3.4 关键实现细节
 
-- **事件仓库**：`Map<runId, row>`，`MAX_PER_ROOT = 200`；插入时超出则淘汰
-  最旧行。行对象在序列化前经 `clean()` 递归剥离 `undefined` 属性——跨
-  Host/Client 的 RPC 与快照都必须是**无损 JSON**。
-- **状态机**：`running → done / failed / interrupted / token-limited /
-  rejected`，另有回填专用的 `ended`（结局未观测）。
-- **根会话判定**：事件到达时用 `ctx.sessions.get(id)` 取头部，沿
-  `header.parentSession` 上溯到无父者；面板当前会话 ID 由浏览器侧
-  `useSessions(s => s.current)` 提供（SnapshotSelectorHook 必须传选择器）。
+- **事件仓库**：`Map<runId, row>`，`MAX_PER_PARENT = 200`；按直接父会话分区，
+  插入时超出则淘汰最旧行。行对象只含标量字段，`undefined` 字段用条件展开
+  省略，跨 Host/Client 的 RPC 与快照都保持**无损 JSON**。
+- **状态机**：`running → completed / aborted / error / max-tokens / refusal`
+  （`stopReason` 直通），另有回填专用的 `unknown`（结局未观测，面板显示
+  「已结束」）。
+- **直接父会话判定**：事件到达时用 `ctx.sessions.get(id)` 取头部，读
+  `header.parentSession` 一跳即得委托方（不再上溯到根）；面板当前会话 ID
+  由浏览器侧 `useSessions(s => s.current)` 提供（SnapshotSelectorHook 必须
+  传选择器）。
 - **构建**：`tsdown` 产出 `lib/index.js` 与 `lib/client.js`；配置文件内联
   平台模块与 `__ModuleLoader__` banner，使仓库**自包含**——不依赖主仓预设，
   `git clone` 后即可 `pnpm install && pnpm build`。
+- **用量折叠**：每个子代理一行 `usage`（input / output / cacheRead /
+  cacheWrite / contextTokens，可选 contextWindow / pressureTokens /
+  projectedTokens）。折叠器复刻 token-meter 投影：`assistant/message`（及
+  `assistant/chunk` 的 usage chunk）携带 provider TokenUsage，同 step 用
+  「替换旧样本」避免重复计数；`request/context` 记录 contextWindow，最新用量
+  样本给出 prompt 侧压力；表层折叠（append 计价每条消息、compaction 按
+  shadow price 收缩）把样本向前推到 `projectedTokens`（窗口利用率 =
+  projectedTokens / contextWindow，见 §2.13）。活会话走
+  `ctx.sessions.get(id).events` 增量折叠，冷会话经 `sessionPersistence.inspect`
+  读取一次并缓存（事件水位 watermark），首次加载并行度 8，之后每轮轮询 O(1)。
+  总量 / 缓存命中率 / 窗口峰值在 Browser 半身按可见行计算。
 - **Hook 顺序约束**：`Panel` 组件的所有 hooks（含 `useRef` / `useEffect`）
   必须位于 `!open` 提前 return **之前**——否则面板打开时 hooks 数量与上次
   渲染不一致，React 抛 #310 并击穿 `shell.overlay` slot（v0.2 开发期踩过，
@@ -246,6 +327,8 @@ dsh-subagent-monitor/
 | 回填行结局未观测 | 「已结束」不代表成功/失败；见路线图 5.1 |
 | 主仓 ↔ GitHub 仓库需手工同步 | 本仓库是发布副本；monorepo 内 `packages/client/ui-subagent-monitor` 是开发源 |
 | 事件仓库为内存态 | 重启后仅剩持久目录回填的历史行；进行中 run 的秒表会按子代理会话续算 |
+| 用量依赖适配器上报 | provider 不上报 usage 时，看板与卡片该处显示「—」；缓存字段也因 provider 而异（如 deepseek 不报 cacheWriteTokens） |
+| 冷会话首次折叠开销 | 首次查看某父会话时需逐个读取冷子代理的持久化日志（之后缓存，每轮轮询 O(1)） |
 
 ---
 
@@ -261,8 +344,8 @@ dsh-subagent-monitor/
 
 ### 5.2 工程化
 
-- ✅ npm 发布 `@leetoners/dsh-ui-subagent-monitor`：v0.2.0 已上线（2026-08-17，
-  GitHub Actions tag 触发 + SLSA provenance），
+- ✅ npm 发布 `@leetoners/dsh-ui-subagent-monitor`：最新 v0.3.0 已上线（2026-08-24；
+  首发 v0.1.0 于 2026-08-15，GitHub Actions tag 触发 + SLSA provenance），
   `dsh plugin add @leetoners/dsh-ui-subagent-monitor` 一行安装；
 - GitHub Actions CI（typecheck + build 自动验证 PR）。
 
@@ -284,4 +367,4 @@ dsh-subagent-monitor/
   10% 同色光晕（成功/警告/错误走 `--dsw-alias-state-*` token）；
 - 标题左侧（四角箭头图标）/ 底部拖动柄（短横条）用低对比度配色，悬停时
   加深，与卡片区视觉分离；
-- 卡片背景与边框取自主题 token，自动适配浅色 / 深色主题。
+- 卡片背景与边框取自主题 token，自动适配浅色 / 深色主题；面板仅展示当前层直接子代理，卡片外框等宽对齐。

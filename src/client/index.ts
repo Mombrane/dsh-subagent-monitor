@@ -87,13 +87,30 @@ export function apply(ctx: ClientContext): void {
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2, rgba(15, 23, 42, 0.15));
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2, rgba(15, 23, 42, 0.25));
 }
-.smn-empty { padding: 24px 12px; text-align: center; color: var(--dsw-alias-label-tertiary, #94a3b8); }
+/* Empty state: like .smn-rows it owns the flexible middle (flex: 1), so a
+   manually resized panel grows this region and the footer + height grip track
+   the bottom edge — instead of staying pinned near the top with dead space
+   left under the grip. */
+.smn-empty {
+  flex: 1;
+  /* Shrinkable floor: any height deficit is absorbed here (never by the
+     footer / height grip), so the grip always stays visible and draggable. */
+  min-height: 0;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 12px; text-align: center;
+  color: var(--dsw-alias-label-tertiary, #94a3b8);
+}
 .smn-row {
   flex: none;
   background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.6));
   border: 1px solid var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.07));
   border-radius: 8px;
   box-shadow: var(--dsw-shadow-lv1, 0 2px 4px rgba(15, 23, 42, 0.04));
+  /* One layer per panel: every card is a direct child, so there is no depth
+     indent to express. border-box keeps every card's outer edge identical
+     regardless of future padding changes. */
+  box-sizing: border-box;
   padding: 7px 10px;
 }
 .smn-row-main { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -140,6 +157,92 @@ export function apply(ctx: ClientContext): void {
   color: var(--dsw-alias-label-tertiary, #a3aec2); font-size: 11px; line-height: 16px;
 }
 .smn-row-open { flex: none; }
+/* Overall dashboard strip between the header and the card list: live counts
+   plus aggregate token usage / cache hit / context for the viewed layer, and
+   the donut (uncached input / cached input / output) with the hit rate at its
+   center. */
+.smn-summary {
+  flex: none;
+  display: flex; flex-direction: row; align-items: center; gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.06));
+  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.35));
+}
+/* Status histogram on the summary's right: one vertical bar per state
+   (running / completed / failed) scaled to the largest count, with the count
+   and a short label underneath. Replaces the duplicated run/completed/failed
+   text cells — the footer still carries the textual status line. */
+.smn-chart {
+  flex: 1; min-width: 0; height: 56px;
+  display: flex; align-items: stretch; gap: 8px;
+}
+.smn-bar {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.smn-bar-track {
+  flex: 1; width: 100%;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: var(--dsw-alias-bg-layer-1, rgba(15, 23, 42, 0.05));
+  border-radius: 3px;
+}
+.smn-bar-fill { width: 12px; border-radius: 2px 2px 0 0; }
+.smn-bar-running { background: var(--dsw-alias-brand-primary, #2563eb); }
+.smn-bar-ok { background: var(--dsw-alias-state-success-primary, rgb(34, 197, 94)); }
+.smn-bar-err { background: var(--dsw-alias-state-error-primary, rgb(236, 19, 19)); }
+.smn-bar-count {
+  font-size: 11px; line-height: 13px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--dsw-alias-label-primary, inherit);
+}
+.smn-bar-label { font-size: 10px; line-height: 12px; color: var(--dsw-alias-label-tertiary, #94a3b8); }
+/* Donut: full background ring + three arcs (uncached input / cached input /
+   output), all in the deepseek blue scale (the harness's own brand blue);
+   the center text shows the cache-hit rate. */
+.smn-ring { flex: none; }
+.smn-ring-bg { stroke: var(--dsw-static-deepseek-100, rgb(228, 237, 253)); }
+.smn-ring-seg-uncached { stroke: var(--dsw-static-deepseek-200, rgb(211, 226, 255)); }
+.smn-ring-seg-cached { stroke: var(--dsw-static-deepseek-450, rgb(86, 134, 254)); }
+.smn-ring-seg-output { stroke: var(--dsw-static-deepseek-500, rgb(65, 118, 230)); }
+.smn-ring-pct {
+  fill: var(--dsw-static-deepseek-450, rgb(86, 134, 254));
+  font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.smn-ring-label { fill: var(--dsw-static-deepseek-400, rgb(103, 158, 254)); font-size: 7px; }
+/* Ring cluster (left of the summary): context-window ring + two cache rings. */
+.smn-summary-left { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
+.smn-summary-rings { display: flex; align-items: flex-end; gap: 8px; }
+.smn-ring-item { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.smn-ring-caption { font-size: 9px; line-height: 1; color: var(--dsw-alias-label-tertiary, #94a3b8); }
+.smn-ring-sm .smn-ring-pct { font-size: 8px; }
+.smn-ring-sm .smn-ring-label { font-size: 6px; }
+/* Context-window ring slices: input (blue-200) / tool output (amber) / output (blue-500). */
+.smn-ctx-seg-input { stroke: var(--dsw-static-deepseek-200, rgb(211, 226, 255)); }
+.smn-ctx-seg-tool { stroke: var(--dsw-static-amber-400, rgb(247, 173, 49)); }
+.smn-ctx-seg-output { stroke: var(--dsw-static-deepseek-500, rgb(65, 118, 230)); }
+.smn-legend-ctx-input { background: var(--dsw-static-deepseek-200, rgb(211, 226, 255)); }
+.smn-legend-ctx-tool { background: var(--dsw-static-amber-400, rgb(247, 173, 49)); }
+.smn-legend-ctx-output { background: var(--dsw-static-deepseek-500, rgb(65, 118, 230)); }
+/* Compact legend under the number rows, shown only while usage data exists. */
+.smn-summary-legend {
+  display: flex; flex-wrap: wrap; gap: 4px 10px;
+  padding-top: 1px;
+}
+.smn-legend-item {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; line-height: 14px; color: var(--dsw-alias-label-tertiary, #94a3b8);
+}
+.smn-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.smn-legend-uncached { background: var(--dsw-static-deepseek-200, rgb(211, 226, 255)); }
+.smn-legend-cached { background: var(--dsw-static-deepseek-450, rgb(86, 134, 254)); }
+.smn-legend-output { background: var(--dsw-static-deepseek-500, rgb(65, 118, 230)); }
+/* Per-card token line under the meta row. */
+.smn-row-usage {
+  display: flex; flex-wrap: wrap; gap: 3px 10px;
+  margin-top: 3px; padding-left: 18px;
+  color: var(--dsw-alias-label-tertiary, #94a3b8);
+  font-size: 10px; line-height: 15px; font-variant-numeric: tabular-nums;
+}
 .smn-panel-footer {
   display: flex; align-items: center; gap: 8px; padding: 7px 10px;
   border-top: 1px solid var(--dsw-alias-border-l1, rgba(15, 23, 42, 0.06));
