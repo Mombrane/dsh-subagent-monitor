@@ -55,6 +55,7 @@ The header's **Collapse** is **two-stage**: the first click hides only the subag
 | 📏 Resizable | drag the bottom grip to resize the panel height; height is remembered per session, double-click resets |
 | 🪗 Two-stage collapse | the header's **Collapse** first hides only the subagent cards (the overall dashboard above stays); **Collapse all** then reduces it to just the title bar; **Expand** restores the full panel in one step |
 | 🔄 Refresh-proof | persistent composition row: the panel auto-recovers after page refresh / service restart |
+| 💤 Quiet when idle | the snapshot poll only runs while the panel is open and the tab is visible; closing the panel or backgrounding the tab stops the timer, and reopening / refocusing fetches once up front before the 1s cadence resumes |
 | 📊 Overall dashboard | summary strip above the cards: three donut charts (main-session **current** context-window occupancy, main-session / subagent cache-hit rates) + a status bar chart (running / done / failed counts, scaled to the largest count) |
 | ⚡ Usage line | each card shows that run's input / output tokens, cache-hit rate, accumulated context, and context-window utilization (when the provider reports it) |
 | 🎯 Current occupancy | the main session's "context" ring shows the **current** window occupancy (`projectedTokens`: newest prompt sample + heuristic surface movement) — it rises as content lands and **drops immediately after compaction**, rather than the session-cumulative figure that only grows |
