@@ -4,15 +4,51 @@
  * live in ./panel.tsx.
  */
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
-import { Panel, Trigger, setSessionsService, type MonitorSessionsService } from './panel'
+import { Panel, Trigger, setLocale, setSessionsService, type MonitorSessionsService } from './panel'
 
 export const inject = ['slots', 'sessions']
+
+/**
+ * The host locale service, narrowed to the two reads the panel needs (same
+ * loose-resolution reason as the sessions service below). `active` is the
+ * host's UI language — the one Settings > General > Language writes.
+ */
+interface MonitorLocaleService {
+  getLocale(): { active: string }
+  subscribe(fn: () => void): () => void
+}
 
 export function apply(ctx: ClientContext): void {
   // The host-side dsh-session augmentation shadows the client sessions
   // contract inside this dual-face package's program, so resolve the runtime
   // service loosely and keep only the two methods the panel calls.
   setSessionsService(ctx.get('sessions') as unknown as MonitorSessionsService | undefined)
+
+  // Follow the host UI language. 'locale' stays OUT of `inject` on purpose:
+  // a cordis inject is a hard requirement, and a composition without the
+  // locale plugin must still get the panel — it keeps the Chinese copy that
+  // has always shipped (see ./locales.ts). The nested inject fiber activates
+  // only while the service is there, and its unload restores the default.
+  ctx.inject(['locale'], (localeCtx: ClientContext) => {
+    localeCtx.effect(() => {
+      const locale = localeCtx.get('locale') as unknown as MonitorLocaleService | undefined
+      if (locale === undefined) return () => {}
+      const adopt = (): void => { setLocale(locale.getLocale().active) }
+      try {
+        adopt()
+        const unsubscribe = locale.subscribe(adopt)
+        return () => {
+          unsubscribe()
+          setLocale(undefined)
+        }
+      } catch {
+        // A locale service that does not answer these two reads leaves the
+        // panel on its default copy rather than taking the plugin down.
+        setLocale(undefined)
+        return () => {}
+      }
+    }, 'ui-subagent-monitor: host locale')
+  })
 
   ctx.effect(() => {
     const tag = document.createElement('style')

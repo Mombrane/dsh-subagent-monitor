@@ -58,6 +58,7 @@ The header's **Collapse** is **two-stage**: the first click hides only the subag
 | 📊 Overall dashboard | summary strip above the cards: three donut charts (main-session **current** context-window occupancy, main-session / subagent cache-hit rates) + a status bar chart (running / done / failed counts, scaled to the largest count) |
 | ⚡ Usage line | each card shows that run's input / output tokens, cache-hit rate, accumulated context, and context-window utilization (when the provider reports it) |
 | 🎯 Current occupancy | the main session's "context" ring shows the **current** window occupancy (`projectedTokens`: newest prompt sample + heuristic surface movement) — it rises as content lands and **drops immediately after compaction**, rather than the session-cumulative figure that only grows |
+| 🌐 Chinese / English | panel copy follows the host UI language (Settings → General → Language); it falls back to Chinese when the host names no language, or one it ships no copy for |
 | 📱 Mobile-friendly | hidden by default at ≤768px viewport; the sidebar entry still opens it manually |
 
 ## 📦 Installation
