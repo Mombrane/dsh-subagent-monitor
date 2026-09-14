@@ -68,7 +68,7 @@
 dsh plugin --profile <your-profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
-> ✅ 已发布 `v0.3.0`（GitHub Actions 构建并签名，SLSA provenance 可验）。
+> ✅ 已发布 `v0.3.1`（GitHub Actions 构建并签名，SLSA provenance 可验）。
 
 ### 方式 B · GitHub 直装
 

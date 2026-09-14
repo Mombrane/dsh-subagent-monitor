@@ -68,7 +68,7 @@ The header's **Collapse** is **two-stage**: the first click hides only the subag
 dsh plugin --profile <your-profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
-> ✅ Published as `v0.3.0` (built and signed by GitHub Actions; SLSA provenance verifiable).
+> ✅ Published as `v0.3.1` (built and signed by GitHub Actions; SLSA provenance verifiable).
 
 ### Option B · Install from GitHub
 
