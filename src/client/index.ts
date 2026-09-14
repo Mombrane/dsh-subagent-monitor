@@ -260,8 +260,60 @@ export function apply(ctx: ClientContext): void {
   background: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.04));
 }
 .smn-back { color: var(--dsw-alias-brand-primary, #2563eb); border-color: var(--dsw-alias-brand-primary, #2563eb); }
+/* ---- horizontal collapse: the panel folds left into a narrow strip ----
+   The width shrinks while the right edge stays anchored (the panel is
+   right-anchored by default; a dragged panel gets its explicit left shifted by
+   the same delta in toggleNarrow), so the box visibly folds toward the left.
+   What survives: the context + main-session rings at full size, restacked
+   top-to-bottom, and the subagent card list underneath in compact form.
+   NARROW_WIDTH in panel.tsx mirrors this width — change both together. */
+.smn-panel--narrow { width: 120px; }
+.smn-panel--narrow .smn-panel-header { gap: 2px; padding: 8px 6px; }
+.smn-panel--narrow .smn-grip-v { width: 14px; }
+/* Icon-only control: the narrow header has no room for a text label. */
+.smn-icon-btn { flex: none; width: 20px; padding: 1px 0; text-align: center; }
+.smn-panel--narrow .smn-panel-running { font-size: 11px; font-weight: 600; }
+.smn-panel--narrow .smn-summary { padding: 8px 6px; }
+/* Row -> column: the whole point of the narrow layout. */
+.smn-panel--narrow .smn-summary-left { width: 100%; }
+.smn-panel--narrow .smn-summary-rings {
+  flex-direction: column; align-items: center; gap: 10px; width: 100%;
+}
+.smn-panel--narrow .smn-rows { padding: 6px; gap: 5px; }
+.smn-panel--narrow .smn-empty { padding: 16px 8px; font-size: 11px; }
+/* Compact card: dot + label on one line, elapsed time right-aligned under it.
+   Rendered as a <button> when the child can be opened, so it needs the button
+   defaults reset back to the surrounding card look. */
+.smn-row-compact {
+  display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+  width: 100%; padding: 6px 8px; text-align: left;
+  font: inherit; color: inherit;
+}
+.smn-row-compact .smn-row-main { gap: 6px; justify-content: flex-start; }
+.smn-row-compact .smn-row-label { font-size: 12px; line-height: 16px; }
+.smn-row-compact .smn-row-time { align-self: flex-end; font-size: 10px; }
+.smn-row-clickable { cursor: pointer; }
+.smn-row-clickable:hover {
+  border-color: var(--dsw-alias-border-l2, rgba(15, 23, 42, 0.3));
+  background: var(--dsw-alias-interactive-bg-hover, rgba(15, 23, 42, 0.04));
+}
+.smn-row-clickable:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary, #2563eb); outline-offset: 1px;
+}
+.smn-panel-footer--narrow { flex-wrap: wrap; gap: 4px; padding: 6px; }
+.smn-panel-footer--narrow .smn-panel-stats {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-size: 11px; font-variant-numeric: tabular-nums;
+}
+.smn-stat-sep { color: var(--dsw-alias-label-tertiary, #cbd5e1); }
+.smn-stat-running { color: var(--dsw-alias-brand-primary, #2563eb); }
+.smn-stat-ok { color: var(--dsw-alias-state-success-primary, rgb(34, 197, 94)); }
+.smn-stat-err { color: var(--dsw-alias-state-error-primary, rgb(236, 19, 19)); }
 @media (max-width: 768px) {
   .smn-panel { width: min(340px, calc(100vw - 24px)); }
+  /* The strip already fits every mobile viewport: keep it fixed so the ring
+     column never reflows on small screens. */
+  .smn-panel--narrow { width: 120px; }
 }
 `
     document.head.appendChild(tag)

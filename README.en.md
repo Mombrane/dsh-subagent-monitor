@@ -18,10 +18,13 @@ Adds a **Subagents** entry at the bottom of the DSH Web sidebar and a card-style
 
 At the top of the panel sits an **overall dashboard**: three donut charts on the left show the main session's **current** context-window occupancy and the cache-hit rates of the main session and the aggregated subagents; a status bar chart on the right shows the current layer's running / done / failed counts (scaled to the largest count). Each card also carries a usage line (that run's input / output, cache hit, and context size).
 
-The header's **Collapse** is **two-stage**: the first click hides only the subagent cards below (the overall dashboard above stays; the button becomes "Collapse all"), the second collapses all the way down to the title bar, and "Expand" restores the full panel in one step.
+The panel collapses in **two directions**, independently of each other:
+
+- **Vertically (two-stage)**: the header's **Collapse** first hides only the subagent cards below (the overall dashboard above stays; the button becomes "Collapse all"), the second click collapses all the way down to the title bar, and "Expand" restores the full panel in one step.
+- **Horizontally (folds left into a strip)**: `◂` folds the panel into a **120px** strip — **the right edge stays anchored, so it folds toward the left**; it keeps the **context + main-session rings at their full 48px size** (the subagent ring is dropped), restacked from a row into a **top-to-bottom column**, and the subagent cards stay underneath in compact form. `▸` unfolds back to 340px.
 
 ```
-┌─ ⤢ Subagent dashboard ────────── [Collapse ▴] [✕] ┐
+┌─ ⤢ Subagent dashboard ───── [◂] [Collapse ▴] [✕] ┐
 │  ◔ ctx ◔ main ◔ subagents     █ run 1 · █ done 1 · █ failed 0 │
 │ ┌───────────────────────────────────────────────┐ │
 │ │ 🔵 Count TS files in ui dir        [Open chat] │ │
@@ -37,9 +40,32 @@ The header's **Collapse** is **two-stage**: the first click hides only the subag
 └───────────────────────────────────────────────────┘
 ```
 
+The narrow strip after a horizontal collapse (120px, two rings at full size):
+
+```
+┌ ⤢ 1 [▸][▴][✕] ┐
+│      ◔        │  ← ctx
+│      ctx      │
+│      ◔        │  ← main
+│     main      │
+│ ┌───────────┐ │
+│ │ 🔵 Count …  │ │  ← the whole card is the "Open chat" target
+│ │     00:42 │ │
+│ └───────────┘ │
+│ ┌───────────┐ │
+│ │ 🟢 Demo s… │ │
+│ │     03:12 │ │
+│ └───────────┘ │
+│ 1/1/0   [⤢][⌫] │
+│ ══════════════ │
+└───────────────┘
+```
+
 > The `⤢` four-arrow grip left of the title moves the panel, the bottom `═` grip resizes it; both are remembered, double-click resets.
 >
-> **Collapse** is two-stage: the first click hides only the **subagent cards** below (the overall dashboard above stays; the button becomes "Collapse all"), the second collapses to just the title bar, and "Expand" restores the full panel in one step.
+> **Collapse** is two-stage (vertical): the first click hides only the **subagent cards** below (the overall dashboard above stays; the button becomes "Collapse all"), the second collapses to just the title bar, and "Expand" restores the full panel in one step.
+>
+> `◂ / ▸` (horizontal): folds left into a 120px strip / unfolds right back to 340px. The strip keeps the **context + main-session rings (full size)** restacked vertically plus the subagent cards; the narrow/wide choice is remembered across sessions. The two directions compose — a narrowed panel still supports both vertical collapse stages.
 
 ![Subagent monitor panel (running + done statuses)](docs/screenshot.png)
 
@@ -53,7 +79,8 @@ The header's **Collapse** is **two-stage**: the first click hides only the subag
 | 🔙 One-click back | inside a subagent session, the panel shows a **← Parent session** button that jumps to the direct parent |
 | 🖐 Movable | drag the four-arrow grip left of the title to move the panel; position is remembered (shared across sessions), double-click resets |
 | 📏 Resizable | drag the bottom grip to resize the panel height; height is remembered per session, double-click resets |
-| 🪗 Two-stage collapse | the header's **Collapse** first hides only the subagent cards (the overall dashboard above stays); **Collapse all** then reduces it to just the title bar; **Expand** restores the full panel in one step |
+| 🪗 Two-stage collapse (vertical) | the header's **Collapse** first hides only the subagent cards (the overall dashboard above stays); **Collapse all** then reduces it to just the title bar; **Expand** restores the full panel in one step |
+| ↔️ Horizontal collapse (leftward) | `◂` folds the panel into a 120px strip, **right edge anchored so it folds left**; keeps the context + main-session rings (full size) restacked **top-to-bottom**, drops the subagent ring, and the subagent cards stay underneath (compact, the whole card opens the chat); narrow/wide is remembered across sessions. Orthogonal to the vertical two-stage collapse — the two compose |
 | 🔄 Refresh-proof | persistent composition row: the panel auto-recovers after page refresh / service restart |
 | 📊 Overall dashboard | summary strip above the cards: three donut charts (main-session **current** context-window occupancy, main-session / subagent cache-hit rates) + a status bar chart (running / done / failed counts, scaled to the largest count) |
 | ⚡ Usage line | each card shows that run's input / output tokens, cache-hit rate, accumulated context, and context-window utilization (when the provider reports it) |
@@ -68,7 +95,7 @@ The header's **Collapse** is **two-stage**: the first click hides only the subag
 dsh plugin --profile <your-profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
-> ✅ Published as `v0.3.1` (built and signed by GitHub Actions; SLSA provenance verifiable).
+> ✅ Published as `v0.4.0` (built and signed by GitHub Actions; SLSA provenance verifiable).
 
 ### Option B · Install from GitHub
 
@@ -148,7 +175,7 @@ The `compatible` marks above are not inferred — they were measured on **dispos
 
 ## 📋 Changelog
 
-See [CHANGELOG.md](./CHANGELOG.md) for the full history. Current version **0.3.1** (aligned with `package.json`).
+See [CHANGELOG.md](./CHANGELOG.md) for the full history. Current version **0.4.0** (aligned with `package.json`).
 
 ## 📖 Architecture
 

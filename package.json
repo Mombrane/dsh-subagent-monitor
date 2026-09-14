@@ -1,7 +1,7 @@
 {
   "name": "@leetoners/dsh-ui-subagent-monitor",
   "description": "DSH web extension: a live subagent run monitor with a sidebar trigger and a floating card panel",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "license": "MIT",
   "type": "module",
   "engines": {

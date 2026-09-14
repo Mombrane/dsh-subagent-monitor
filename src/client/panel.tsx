@@ -69,11 +69,19 @@ interface MonitorState {
   main: MonitorUsage | undefined
   open: boolean
   collapse: CollapseLevel
+  /**
+   * Horizontal collapse: the panel narrows toward the left (its right edge
+   * stays put), the three summary rings restack top-to-bottom, and the
+   * subagent card list keeps running underneath in a compact form. Orthogonal
+   * to `collapse`, so the two-stage vertical collapse still applies inside a
+   * narrowed panel.
+   */
+  narrow: boolean
   hidden: string[]
 }
 
 const listeners = new Set<() => void>()
-let state: MonitorState = { sessionId: undefined, now: Date.now(), rows: [], main: undefined, open: false, collapse: 'none', hidden: [] }
+let state: MonitorState = { sessionId: undefined, now: Date.now(), rows: [], main: undefined, open: false, collapse: 'none', narrow: false, hidden: [] }
 let autoOpened = false
 let polling = false
 
@@ -406,8 +414,14 @@ interface PanelLayout {
 // is per-session (each session keeps its own panel size). Two storage spaces:
 const POSITION_KEY = 'dsh-smn.panel-position.v1'
 const HEIGHT_KEY_PREFIX = 'dsh-smn.panel-height.v2.'
+// Horizontal collapse is a page-global preference, like the position: one
+// narrow/wide choice shared across sessions.
+const NARROW_KEY = 'dsh-smn.panel-narrow.v1'
 const DEFAULT_TOP = 80
 const EDGE = 8
+/** Panel width in each direction state, mirrored by the CSS below. */
+const WIDE_WIDTH = 340
+const NARROW_WIDTH = 120
 // The resize floor must clear the empty state's natural content height
 // (header + summary + empty + footer + grip ≈ 226px): a lower floor clips the
 // footer and the bottom height grip out of the panel (overflow: hidden), so a
@@ -477,6 +491,42 @@ function saveHeight(): void {
   } catch {
     // Storage unavailable: layout still lives for this page.
   }
+}
+
+/** Read the persisted horizontal-collapse preference (defaults to wide). */
+function readNarrow(): boolean {
+  try {
+    return window.localStorage.getItem(NARROW_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+function saveNarrow(narrow: boolean): void {
+  try {
+    window.localStorage.setItem(NARROW_KEY, narrow ? '1' : '0')
+  } catch {
+    // Storage unavailable: the choice still lives for this page.
+  }
+}
+
+/**
+ * Flip the horizontal collapse, keeping the panel's RIGHT edge anchored so the
+ * box visually folds toward the left (and unfolds back rightward). With the
+ * default right-anchored placement CSS already does that; once the panel has
+ * been dragged it carries an explicit `left`, so compensate by shifting left
+ * by the width delta.
+ */
+function toggleNarrow(): void {
+  const next = !state.narrow
+  if (layout.left !== null) {
+    const delta = WIDE_WIDTH - NARROW_WIDTH
+    layout.left = Math.max(EDGE, layout.left + (next ? delta : -delta))
+    clampLayout()
+    savePosition()
+  }
+  saveNarrow(next)
+  commit({ narrow: next })
 }
 
 function clampLayout(): void {
@@ -558,8 +608,12 @@ export function Trigger(props: TriggerProps): ReactElement {
   useEffect(() => {
     if (autoOpened) return
     autoOpened = true
+    // Restore the horizontal-collapse choice before the first paint of the
+    // panel, so a narrowed panel does not flash at full width on reload.
+    const narrow = readNarrow()
     // Mobile viewports default to hidden; the trigger stays for explicit open.
-    if (!window.matchMedia(MOBILE_QUERY).matches) commit({ open: true })
+    const open = !window.matchMedia(MOBILE_QUERY).matches
+    commit(open ? { open: true, narrow } : { narrow })
   }, [])
 
   const running = monitor.rows.filter(row => row.status === 'running').length
@@ -653,6 +707,7 @@ export function Panel(props: PanelProps): ReactElement | null {
   // failed counts as the footer, drawn as color-coded vertical bars instead
   // of duplicated text. Heights scale to the largest count so a lone run
   // still reads clearly.
+  const narrow = monitor.narrow
   const statusMax = Math.max(running, done, failed, 1)
   const statusBar = (count: number, cls: string, label: string): ReactElement => (
     <div className="smn-bar">
@@ -668,6 +723,7 @@ export function Panel(props: PanelProps): ReactElement | null {
   )
 
   const style = layoutStyle(monitor.collapse !== 'none')
+  const panelClass = 'smn-panel' + (narrow ? ' smn-panel--narrow' : '')
 
   // Left grip drags the panel; bottom grip resizes its height. Handlers write
   // straight to the DOM node (no React state per pointermove — that was the
@@ -768,8 +824,11 @@ export function Panel(props: PanelProps): ReactElement | null {
           <path d="M11.2 6 8.4 4.7V7.3Z" />
         </svg>
       </div>
-      <span className="smn-panel-title">子代理看板</span>
-      {subagentParent !== undefined && sessionsSvc !== undefined
+      {/* The title and the "back one layer" button are the first things the
+          narrow strip gives up: at 120px only the state badge and the three
+          controls fit. */}
+      {narrow ? null : <span className="smn-panel-title">子代理看板</span>}
+      {!narrow && subagentParent !== undefined && sessionsSvc !== undefined
         ? (
           <button
             className="smn-btn smn-back"
@@ -783,23 +842,49 @@ export function Panel(props: PanelProps): ReactElement | null {
         : null}
       {running > 0 ? <span className="smn-panel-running">{running}</span> : null}
       <span className="smn-panel-spacer" />
+      {/* Horizontal collapse: folds the panel left into a narrow strip that
+          keeps the three rings (restacked vertically) and the subagent cards. */}
       <button
-        className="smn-btn"
+        className="smn-btn smn-icon-btn"
+        type="button"
+        title={narrow ? '向右展开面板' : '向左收起为窄栏，保留上下文与主会话环、子代理卡片'}
+        aria-label={narrow ? '向右展开面板' : '向左收起为窄栏'}
+        aria-expanded={!narrow}
+        onClick={toggleNarrow}
+      >
+        {narrow ? '▸' : '◂'}
+      </button>
+      <button
+        className={'smn-btn' + (narrow ? ' smn-icon-btn' : '')}
         type="button"
         title={monitor.collapse === 'none' ? '收起子代理卡片，保留总览' : monitor.collapse === 'rows' ? '全部收起，仅留标题栏' : '展开面板'}
+        aria-label={monitor.collapse === 'all' ? '向下展开面板' : '向上收起面板'}
         onClick={() => {
           const next: CollapseLevel = monitor.collapse === 'none' ? 'rows' : monitor.collapse === 'rows' ? 'all' : 'none'
           commit({ collapse: next })
         }}
       >
-        {monitor.collapse === 'none' ? '收起 ▴' : monitor.collapse === 'rows' ? '全部收起 ▴' : '展开 ▾'}
+        {narrow
+          ? (monitor.collapse === 'all' ? '▾' : '▴')
+          : (monitor.collapse === 'none' ? '收起 ▴' : monitor.collapse === 'rows' ? '全部收起 ▴' : '展开 ▾')}
       </button>
-      <button className="smn-btn" type="button" title="关闭" onClick={() => commit({ open: false })}>
+      <button
+        className={'smn-btn' + (narrow ? ' smn-icon-btn' : '')}
+        type="button"
+        title="关闭"
+        aria-label="关闭子代理看板"
+        onClick={() => commit({ open: false })}
+      >
         ✕
       </button>
     </div>
   )
 
+  // The narrow strip keeps two of the three rings (context + main session) at
+  // their FULL size — no downscale — restacked into a column via
+  // .smn-panel--narrow CSS. The subagent ring drops out when narrow (the strip
+  // would otherwise get too tall); the footer's counts carry that info. The
+  // status histogram also needs horizontal room, so it drops out too.
   const summaryEl = (
     <div className="smn-summary">
       <div className="smn-summary-left">
@@ -818,29 +903,37 @@ export function Panel(props: PanelProps): ReactElement | null {
             />
             <span className="smn-ring-caption">主会话</span>
           </div>
-          <div className="smn-ring-item">
-            <RingChart
-              size={48}
-              uncachedInput={totals.inputTokens}
-              cachedInput={totals.cacheReadTokens}
-              output={totals.outputTokens}
-              hitRate={cacheHitRate}
-            />
-            <span className="smn-ring-caption">子代理</span>
-          </div>
+          {narrow
+            ? null
+            : (
+              <div className="smn-ring-item">
+                <RingChart
+                  size={48}
+                  uncachedInput={totals.inputTokens}
+                  cachedInput={totals.cacheReadTokens}
+                  output={totals.outputTokens}
+                  hitRate={cacheHitRate}
+                />
+                <span className="smn-ring-caption">子代理</span>
+              </div>
+            )}
         </div>
       </div>
-      <div className="smn-chart">
-        {statusBar(running, 'smn-bar-running', '运行')}
-        {statusBar(done, 'smn-bar-ok', '完成')}
-        {statusBar(failed, 'smn-bar-err', '异常')}
-      </div>
+      {narrow
+        ? null
+        : (
+          <div className="smn-chart">
+            {statusBar(running, 'smn-bar-running', '运行')}
+            {statusBar(done, 'smn-bar-ok', '完成')}
+            {statusBar(failed, 'smn-bar-err', '异常')}
+          </div>
+        )}
     </div>
   )
 
   if (monitor.collapse === 'all') {
     return (
-      <div className="smn-panel" style={style} ref={panelRef}>
+      <div className={panelClass} style={style} ref={panelRef}>
         {header}
       </div>
     )
@@ -863,12 +956,46 @@ export function Panel(props: PanelProps): ReactElement | null {
           const metaLine = [row.provider, modeText, shortId(row.id)]
             .filter(value => typeof value === 'string' && value !== '')
             .join(' · ')
+          const canOpen = row.mode !== undefined && sessionsSvc !== undefined
+          // Narrow mode has no room for the「打开对话」button or the provider /
+          // mode / id meta line, so the whole card becomes the open affordance
+          // (a real button for keyboard and screen-reader parity) and only the
+          // dot, the label and the elapsed time survive.
+          if (narrow) {
+            const summaryTitle = `${rowLabel(row)} · ${meta.label} · ${elapsed}`
+              + (metaLine !== '' ? ` · ${metaLine}` : '')
+            return canOpen
+              ? (
+                <button
+                  key={row.id}
+                  className="smn-row smn-row-compact smn-row-clickable"
+                  type="button"
+                  title={`${summaryTitle}（点击打开对话）`}
+                  onClick={() => openChild(row)}
+                >
+                  <div className="smn-row-main">
+                    <StatusDot status={row.status} />
+                    <span className="smn-row-label">{rowLabel(row)}</span>
+                  </div>
+                  <span className="smn-row-time">{elapsed}</span>
+                </button>
+              )
+              : (
+                <div key={row.id} className="smn-row smn-row-compact" title={summaryTitle}>
+                  <div className="smn-row-main">
+                    <StatusDot status={row.status} />
+                    <span className="smn-row-label">{rowLabel(row)}</span>
+                  </div>
+                  <span className="smn-row-time">{elapsed}</span>
+                </div>
+              )
+          }
           return (
             <div key={row.id} className="smn-row">
               <div className="smn-row-main">
                 <StatusDot status={row.status} />
                 <span className="smn-row-label" title={rowLabel(row)}>{rowLabel(row)}</span>
-                {row.mode !== undefined && sessionsSvc !== undefined
+                {canOpen
                   ? (
                     <button className="smn-btn smn-row-open" type="button" onClick={() => openChild(row)}>
                       打开对话
@@ -898,37 +1025,76 @@ export function Panel(props: PanelProps): ReactElement | null {
       </div>
     )
 
-  const footer = (
-    <div className="smn-panel-footer">
-      <span className="smn-panel-stats">
-        {`运行 ${running} · 完成 ${done} · 异常 ${failed}`}
-      </span>
-      <span className="smn-panel-spacer" />
-      {monitor.hidden.length > 0
-        ? (
-          <button className="smn-btn" type="button" onClick={() => commit({ hidden: [] })}>
-            {`显示已隐藏 ${monitor.hidden.length}`}
-          </button>
-        )
-        : null}
-      <button
-        className="smn-btn"
-        type="button"
-        onClick={() => {
-          const hidden = [...state.hidden]
-          for (const row of state.rows) {
-            if (row.status !== 'running' && !hidden.includes(row.id)) hidden.push(row.id)
-          }
-          commit({ hidden })
-        }}
-      >
-        清空已完成
-      </button>
-    </div>
-  )
+  const clearFinished = (): void => {
+    const hidden = [...state.hidden]
+    for (const row of state.rows) {
+      if (row.status !== 'running' && !hidden.includes(row.id)) hidden.push(row.id)
+    }
+    commit({ hidden })
+  }
+
+  // Narrow footer: the counts compress to a slash-separated triple (which also
+  // stands in for the dropped histogram) and the two maintenance buttons become
+  // icons on a second line.
+  const footer = narrow
+    ? (
+      <div className="smn-panel-footer smn-panel-footer--narrow">
+        <span
+          className="smn-panel-stats"
+          title={`运行 ${running} · 完成 ${done} · 异常 ${failed}`}
+        >
+          <b className="smn-stat-running">{running}</b>
+          <span className="smn-stat-sep">/</span>
+          <b className="smn-stat-ok">{done}</b>
+          <span className="smn-stat-sep">/</span>
+          <b className="smn-stat-err">{failed}</b>
+        </span>
+        <span className="smn-panel-spacer" />
+        {monitor.hidden.length > 0
+          ? (
+            <button
+              className="smn-btn smn-icon-btn"
+              type="button"
+              title={`显示已隐藏 ${monitor.hidden.length}`}
+              aria-label={`显示已隐藏 ${monitor.hidden.length}`}
+              onClick={() => commit({ hidden: [] })}
+            >
+              ⤢
+            </button>
+          )
+          : null}
+        <button
+          className="smn-btn smn-icon-btn"
+          type="button"
+          title="清空已完成"
+          aria-label="清空已完成"
+          onClick={clearFinished}
+        >
+          ⌫
+        </button>
+      </div>
+    )
+    : (
+      <div className="smn-panel-footer">
+        <span className="smn-panel-stats">
+          {`运行 ${running} · 完成 ${done} · 异常 ${failed}`}
+        </span>
+        <span className="smn-panel-spacer" />
+        {monitor.hidden.length > 0
+          ? (
+            <button className="smn-btn" type="button" onClick={() => commit({ hidden: [] })}>
+              {`显示已隐藏 ${monitor.hidden.length}`}
+            </button>
+          )
+          : null}
+        <button className="smn-btn" type="button" onClick={clearFinished}>
+          清空已完成
+        </button>
+      </div>
+    )
 
   return (
-    <div className="smn-panel" style={style} ref={panelRef}>
+    <div className={panelClass} style={style} ref={panelRef}>
       {header}
       {summaryEl}
       {/* Stage-one collapse hides only the subagent cards; the overview
