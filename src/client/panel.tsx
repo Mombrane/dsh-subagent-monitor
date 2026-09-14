@@ -1,7 +1,7 @@
 /**
  * Subagent run monitor, browser half: the sidebar footer trigger and the
  * floating panel. The panel polls the node half's snapshot route once per
- * second while the trigger stays mounted, so a page refresh recovers
+ * second while it is open and the tab is visible, so a page refresh recovers
  * everything without any model interaction.
  */
 import {
@@ -592,18 +592,41 @@ export function Trigger(props: TriggerProps): ReactElement {
     }
   }, [current])
 
+  // The timer only runs while the panel is actually being looked at: a closed
+  // panel or a hidden tab stops it outright, instead of spending 1 req/s on a
+  // snapshot nobody is rendering. Every (re)start polls once up front, so
+  // reopening the panel / refocusing the tab shows fresh rows immediately
+  // rather than the previous snapshot until the first tick lands.
   useEffect(() => {
+    if (!monitor.open) return
     if (polling) return
     polling = true
-    const timer = window.setInterval(() => {
+    let timer: number | undefined
+    const tick = (): void => {
       const sid = state.sessionId
       if (sid !== undefined) void refresh(sid)
-    }, 1000)
+    }
+    const start = (): void => {
+      if (timer !== undefined) return
+      tick()
+      timer = window.setInterval(tick, 1000)
+    }
+    const stop = (): void => {
+      if (timer !== undefined) window.clearInterval(timer)
+      timer = undefined
+    }
+    const onVisibility = (): void => {
+      if (document.hidden) stop()
+      else start()
+    }
+    if (!document.hidden) start()
+    document.addEventListener('visibilitychange', onVisibility)
     return () => {
-      window.clearInterval(timer)
+      stop()
+      document.removeEventListener('visibilitychange', onVisibility)
       polling = false
     }
-  }, [])
+  }, [monitor.open])
 
   useEffect(() => {
     if (autoOpened) return
