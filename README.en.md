@@ -102,6 +102,18 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 > Also add this package path to `references` in <dsh>/tsconfig.client.json, and point this
 > package's `tsdown.config.ts` at the monorepo preset (`import { clientBundle } from '../tsdown.client.ts'`).
 
+## 🧩 Compatibility
+
+DSH STORE's automated recheck only accepts **per-release records with full SemVer keys** in `package.json`; a range alone is not installable evidence. This plugin declares:
+
+| Item | Declaration |
+| --- | --- |
+| DSH range | `>=0.1.0-rc.0` |
+| Node.js | `^22.19.0` or `>=24.0.0` (same as DSH itself) |
+| `0.1.5-alpha.2` · `0.1.5-rc.1` · `0.1.5-rc.2` | `compatible` |
+
+The `compatible` marks above are not inferred — they were measured on **disposable profiles** on 2026-09-14, one per release: separate `DSH_HOME` → `dsh plugin --profile web add` (bundle layer composed) → `dsh web` boots with the panel rendering in the browser and `GET /api/subagent-monitor/snapshot` returning `200` → `dsh plugin --profile web remove` drops that route back to `404` and empties the bundle layer. Any DSH release not listed is `unknown`.
+
 ## 🏷️ Status legend
 
 | Status | Meaning |
@@ -136,7 +148,7 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 
 ## 📋 Changelog
 
-See [CHANGELOG.md](./CHANGELOG.md) for the full history. Current version **0.3.0** (aligned with `package.json`).
+See [CHANGELOG.md](./CHANGELOG.md) for the full history. Current version **0.3.1** (aligned with `package.json`).
 
 ## 📖 Architecture
 

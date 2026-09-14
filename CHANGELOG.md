@@ -3,6 +3,16 @@
 本文件记录 `@leetoners/dsh-ui-subagent-monitor` 所有值得记录的变更。
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.3.1] - 2026-09-14
+
+### Added
+
+- **DSH 兼容性逐版本声明**：`package.json` 新增 `dsh.compatibility`（DSH 范围 + `dshReleases` 精确矩阵）与 `engines`（Node.js 范围），README 双语同步新增「兼容性」小节并附实测方法。DSH STORE 的八小时复查只认完整 SemVer 的逐版本记录，宽泛范围不再算可安装证据。
+
+### Fixed
+
+- 修复 DSH STORE 的**兼容性暂时下架**（`DSH_LATEST_THREE_COMPATIBILITY_HOLD`，Issue #839）：固定 Commit 的 manifest 缺少精确兼容记录，目录条目被自动从 `approved` 转为 `unlisted`；补齐声明并提升插件 SemVer 后交由自动复查恢复上架。
+
 ## [0.3.0] - 2026-08-24
 
 ### Added

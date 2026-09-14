@@ -102,6 +102,18 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 > 还需在 `<dsh>/tsconfig.client.json` 的 `references` 中加入本包路径，并将本包
 > `tsdown.config.ts` 改为引用主仓预设（`import { clientBundle } from '../tsdown.client.ts'`）。
 
+## 🧩 兼容性
+
+DSH STORE 的自动复查只认 `package.json` 中**完整 SemVer 的逐版本记录**，宽泛范围不算可安装证据。本插件声明：
+
+| 项 | 声明 |
+| --- | --- |
+| DSH 版本范围 | `>=0.1.0-rc.0` |
+| Node.js | `^22.19.0` 或 `>=24.0.0`（与 DSH 自身一致） |
+| `0.1.5-alpha.2` · `0.1.5-rc.1` · `0.1.5-rc.2` | `compatible` |
+
+上表的 `compatible` 不是推断，是 2026-09-14 在**一次性 Profile** 上逐版本实测的结果：每个版本建独立 `DSH_HOME` → `dsh plugin --profile web add`（bundle 层成功合成）→ `dsh web` 启动后浏览器内面板正常渲染、`GET /api/subagent-monitor/snapshot` 返回 `200` → `dsh plugin --profile web remove` 后该路由回到 `404`、bundle 层归零。未列出的 DSH 版本即 `unknown`。
+
 ## 🏷️ 状态图例
 
 | 状态 | 含义 |
@@ -136,7 +148,7 @@ pnpm install && pnpm --filter @leetoners/dsh-ui-subagent-monitor bundle
 
 ## 📋 变更日志
 
-完整变更历史见 [CHANGELOG.md](./CHANGELOG.md)。当前版本 **0.3.0**（与 `package.json` 对齐）。
+完整变更历史见 [CHANGELOG.md](./CHANGELOG.md)。当前版本 **0.3.1**（与 `package.json` 对齐）。
 
 ## 📖 架构文档
 
