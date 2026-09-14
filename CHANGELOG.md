@@ -3,11 +3,15 @@
 本文件记录 `@leetoners/dsh-ui-subagent-monitor` 所有值得记录的变更。
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [0.4.1] - 2026-09-14
 
 ### Fixed
 
-- 修复面板关闭后仍以 1 秒节奏轮询快照路由：轮询定时器改为只在**面板打开且标签页可见**时运行——关闭面板、或标签页进入后台（`document.hidden`）即 `clearInterval`，重新打开 / 切回前台（`visibilitychange`）时**先补发一次请求再重启定时器**，所以重新打开看到的是当前快照，而不是上次关闭时的旧数据。空闲会话（零子代理）实测 20 秒窗口：关闭面板由 20 次请求降到 0 次，后台标签页同样由 20 次降到 0 次；面板打开时仍是 1.00 次/秒，反复开关不会残留多余定时器。
+- 修复面板关闭后仍以 1 秒节奏轮询快照路由（[#4](https://github.com/Mombrane/dsh-subagent-monitor/issues/4)，贡献者 [@dhanjit](https://github.com/dhanjit) 的 PR [#5](https://github.com/Mombrane/dsh-subagent-monitor/pull/5)）：轮询定时器改为只在**面板打开且标签页可见**时运行——关闭面板、或标签页进入后台（`document.hidden`）即 `clearInterval`，重新打开 / 切回前台（`visibilitychange`）时**先补发一次请求再重启定时器**，所以重新打开看到的是当前快照，而不是上次关闭时的旧数据。空闲会话（零子代理）实测 20 秒窗口：关闭面板由 20 次请求降到 0 次，后台标签页同样由 20 次降到 0 次；面板打开时仍是 1.00 次/秒，反复开关不会残留多余定时器。
+
+### Changed
+
+- 仓库整理：宿主侧子代理 API 调研报告移入 [docs/host-subagent-api.md](./docs/host-subagent-api.md)（由 ARCHITECTURE §7 引用）；`pnpm-lock.yaml` / `pnpm-workspace.yaml` 加入 `.gitignore`（本仓发布走 npm）；`repository.url` 补上 `git+` 前缀（此前每次发布都被 npm 自动纠正）。
 
 ## [0.4.0] - 2026-09-14
 
