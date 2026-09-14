@@ -12,6 +12,7 @@ import type { SessionId, SubagentAddress } from '@deepseek-ai/dsh-client-runtime
 import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
+import { DEFAULT_LOCALE, resolveLocale, translator, type LocaleId, type MonitorKey, type Translate } from './locales'
 
 // ---- wire shape shared with the node half ----
 
@@ -56,7 +57,7 @@ interface SnapshotPayload {
 // ---- page-local store (one instance per page) ----
 
 /**
- * Panel collapse depth. Two-stage collapse: the header「收起」button first
+ * Panel collapse depth. Two-stage collapse: the header's collapse button first
  * hides only the subagent card list ('rows', the overview summary stays),
  * then collapses everything down to the header ('all').
  */
@@ -78,10 +79,12 @@ interface MonitorState {
    */
   narrow: boolean
   hidden: string[]
+  /** Language the copy renders in; the default until the host names another. */
+  locale: LocaleId
 }
 
 const listeners = new Set<() => void>()
-let state: MonitorState = { sessionId: undefined, now: Date.now(), rows: [], main: undefined, open: false, collapse: 'none', narrow: false, hidden: [] }
+let state: MonitorState = { sessionId: undefined, now: Date.now(), rows: [], main: undefined, open: false, collapse: 'none', narrow: false, hidden: [], locale: DEFAULT_LOCALE }
 let autoOpened = false
 let polling = false
 
@@ -119,22 +122,32 @@ export function setSessionsService(service: MonitorSessionsService | undefined):
   sessionsSvc = service
 }
 
+/**
+ * Adopt the host's UI language. The plugin body calls this whenever the host
+ * publishes its active locale; a language this plugin ships no copy for — and
+ * a host naming none at all — leaves the panel on its default Chinese copy.
+ */
+export function setLocale(id: string | undefined): void {
+  const locale = resolveLocale(id)
+  if (locale !== state.locale) commit({ locale })
+}
+
 // ---- helpers ----
 
 interface StatusMeta {
   cls: string
-  label: string
+  label: MonitorKey
 }
 
-const UNKNOWN: StatusMeta = { cls: 'smn-dot-off', label: '已结束' }
+const UNKNOWN: StatusMeta = { cls: 'smn-dot-off', label: 'status.ended' }
 
 const STATUS: Record<string, StatusMeta> = {
-  running: { cls: 'smn-dot-running', label: '运行中' },
-  completed: { cls: 'smn-dot-ok', label: '完成' },
-  error: { cls: 'smn-dot-error', label: '失败' },
-  aborted: { cls: 'smn-dot-warn', label: '已打断' },
-  'max-tokens': { cls: 'smn-dot-warn', label: '令牌上限' },
-  refusal: { cls: 'smn-dot-warn', label: '已拒绝' },
+  running: { cls: 'smn-dot-running', label: 'status.running' },
+  completed: { cls: 'smn-dot-ok', label: 'status.completed' },
+  error: { cls: 'smn-dot-error', label: 'status.error' },
+  aborted: { cls: 'smn-dot-warn', label: 'status.aborted' },
+  'max-tokens': { cls: 'smn-dot-warn', label: 'status.maxTokens' },
+  refusal: { cls: 'smn-dot-warn', label: 'status.refusal' },
 }
 
 // ---- status marker: DSH-native StateDot spec (ui-primitives) ----
@@ -191,10 +204,10 @@ function fmtDuration(start: number | undefined, end: number | undefined): string
 const shortId = (id: string | undefined): string =>
   id === undefined || id.length <= 8 ? id ?? '—' : id.slice(0, 8)
 
-function rowLabel(row: MonitorRow): string {
+function rowLabel(row: MonitorRow, t: Translate): string {
   if (typeof row.label === 'string' && row.label !== '') return row.label
-  if (typeof row.provider === 'string' && row.provider !== '') return `[${row.provider}] 子代理`
-  return `子代理 ${shortId(row.id)}`
+  if (typeof row.provider === 'string' && row.provider !== '') return t('row.label.provider', { provider: row.provider })
+  return t('row.label.fallback', { id: shortId(row.id) })
 }
 
 const fmtTokens = (n: number): string => {
@@ -245,6 +258,7 @@ function RingChart(props: {
   output: number
   hitRate: number | undefined
   size?: number
+  t: Translate
 }): ReactElement {
   const size = props.size ?? RING_SIZE
   const radius = RING_RADIUS * (size / RING_SIZE)
@@ -270,8 +284,8 @@ function RingChart(props: {
       viewBox={'0 0 ' + size + ' ' + size}
       role="img"
       aria-label={props.hitRate !== undefined
-        ? '模型用量构成，缓存命中率 ' + Math.round(props.hitRate * 100) + '%'
-        : '模型用量构成，无用量数据'}
+        ? props.t('ring.usage.aria', { rate: Math.round(props.hitRate * 100) })
+        : props.t('ring.usage.aria.empty')}
     >
       <circle className="smn-ring-bg" cx={c} cy={c} r={radius} fill="none" strokeWidth={stroke} />
       <g transform={'rotate(-90 ' + c + ' ' + c + ')'}>
@@ -312,7 +326,7 @@ function RingChart(props: {
             textAnchor="middle"
             dominantBaseline="central"
           >
-            缓存
+            {props.t('ring.cache')}
           </text>
         )
         : null}
@@ -330,7 +344,7 @@ function RingChart(props: {
  * a percentage of the window. With no contextWindow the ring fills on the
  * used figure instead.
  */
-function ContextRing(props: { usage: MonitorUsage | undefined; size?: number }): ReactElement {
+function ContextRing(props: { usage: MonitorUsage | undefined; size?: number; t: Translate }): ReactElement {
   const u = props.usage
   // projectedTokens is the occupancy figure (per the token-meter's contract);
   // fall back to the newest prompt sample, then to the cumulative figure for
@@ -355,8 +369,8 @@ function ContextRing(props: { usage: MonitorUsage | undefined; size?: number }):
       viewBox={'0 0 ' + size + ' ' + size}
       role="img"
       aria-label={hasData && total > 0
-        ? '主会话上下文，当前 ' + Math.round(frac * 100) + '% 窗口'
-        : '主会话上下文，无用量数据'}
+        ? props.t('ring.context.aria', { rate: Math.round(frac * 100) })
+        : props.t('ring.context.aria.empty')}
     >
       <circle className="smn-ring-bg" cx={c} cy={c} r={radius} fill="none" strokeWidth={stroke} />
       <g transform={'rotate(-90 ' + c + ' ' + c + ')'}>
@@ -392,7 +406,7 @@ function ContextRing(props: { usage: MonitorUsage | undefined; size?: number }):
             textAnchor="middle"
             dominantBaseline="central"
           >
-            窗口
+            {props.t('ring.window')}
           </text>
         )
         : null}
@@ -639,10 +653,11 @@ export function Trigger(props: TriggerProps): ReactElement {
     commit(open ? { open: true, narrow } : { narrow })
   }, [])
 
+  const t = translator(monitor.locale)
   const running = monitor.rows.filter(row => row.status === 'running').length
   return (
-    <button className="smn-trigger" type="button" title="子代理看板" onClick={() => commit({ open: !state.open })}>
-      <span className="smn-trigger-label">子代理</span>
+    <button className="smn-trigger" type="button" title={t('trigger.title')} onClick={() => commit({ open: !state.open })}>
+      <span className="smn-trigger-label">{t('trigger.label')}</span>
       {running > 0 ? <span className="smn-trigger-badge">{running}</span> : null}
     </button>
   )
@@ -685,6 +700,8 @@ export function Panel(props: PanelProps): ReactElement | null {
   }, [monitor.collapse])
 
   if (!monitor.open) return null
+
+  const t = translator(monitor.locale)
 
   // Shared position (once per page) + per-session height: rebind the height
   // slot to the current session before computing styles.
@@ -835,7 +852,7 @@ export function Panel(props: PanelProps): ReactElement | null {
     <div className="smn-panel-header">
       <div
         className="smn-grip-v"
-        title="拖动调整位置 · 双击复位"
+        title={t('panel.moveGrip.title')}
         aria-hidden="true"
         onPointerDown={onMoveGripDown}
         onDoubleClick={resetPosition}
@@ -850,16 +867,16 @@ export function Panel(props: PanelProps): ReactElement | null {
       {/* The title and the "back one layer" button are the first things the
           narrow strip gives up: at 120px only the state badge and the three
           controls fit. */}
-      {narrow ? null : <span className="smn-panel-title">子代理看板</span>}
+      {narrow ? null : <span className="smn-panel-title">{t('panel.title')}</span>}
       {!narrow && subagentParent !== undefined && sessionsSvc !== undefined
         ? (
           <button
             className="smn-btn smn-back"
             type="button"
-            title="返回上一层会话"
+            title={t('panel.back.title')}
             onClick={() => sessionsSvc?.open(subagentParent as SessionId)}
           >
-            ← 上一层
+            {t('panel.back')}
           </button>
         )
         : null}
@@ -870,8 +887,8 @@ export function Panel(props: PanelProps): ReactElement | null {
       <button
         className="smn-btn smn-icon-btn"
         type="button"
-        title={narrow ? '向右展开面板' : '向左收起为窄栏，保留上下文与主会话环、子代理卡片'}
-        aria-label={narrow ? '向右展开面板' : '向左收起为窄栏'}
+        title={narrow ? t('panel.narrowExpand.title') : t('panel.narrow.title')}
+        aria-label={narrow ? t('panel.narrowExpand.aria') : t('panel.narrow.aria')}
         aria-expanded={!narrow}
         onClick={toggleNarrow}
       >
@@ -880,22 +897,22 @@ export function Panel(props: PanelProps): ReactElement | null {
       <button
         className={'smn-btn' + (narrow ? ' smn-icon-btn' : '')}
         type="button"
-        title={monitor.collapse === 'none' ? '收起子代理卡片，保留总览' : monitor.collapse === 'rows' ? '全部收起，仅留标题栏' : '展开面板'}
-        aria-label={monitor.collapse === 'all' ? '向下展开面板' : '向上收起面板'}
+        title={monitor.collapse === 'none' ? t('panel.collapseRows.title') : monitor.collapse === 'rows' ? t('panel.collapseAll.title') : t('panel.expand.title')}
+        aria-label={monitor.collapse === 'all' ? t('panel.collapse.aria.expand') : t('panel.collapse.aria.collapse')}
         onClick={() => {
           const next: CollapseLevel = monitor.collapse === 'none' ? 'rows' : monitor.collapse === 'rows' ? 'all' : 'none'
           commit({ collapse: next })
         }}
       >
         {narrow
-          ? (monitor.collapse === 'all' ? '▾' : '▴')
-          : (monitor.collapse === 'none' ? '收起 ▴' : monitor.collapse === 'rows' ? '全部收起 ▴' : '展开 ▾')}
+          ? (monitor.collapse === 'all' ? '\u25be' : '\u25b4')
+          : (monitor.collapse === 'none' ? t('panel.collapseRows') : monitor.collapse === 'rows' ? t('panel.collapseAll') : t('panel.expand'))}
       </button>
       <button
         className={'smn-btn' + (narrow ? ' smn-icon-btn' : '')}
         type="button"
-        title="关闭"
-        aria-label="关闭子代理看板"
+        title={t('panel.close')}
+        aria-label={t('panel.close.aria')}
         onClick={() => commit({ open: false })}
       >
         ✕
@@ -913,8 +930,8 @@ export function Panel(props: PanelProps): ReactElement | null {
       <div className="smn-summary-left">
         <div className="smn-summary-rings">
           <div className="smn-ring-item">
-            <ContextRing usage={main} size={48} />
-            <span className="smn-ring-caption">上下文</span>
+            <ContextRing usage={main} size={48} t={t} />
+            <span className="smn-ring-caption">{t('summary.context')}</span>
           </div>
           <div className="smn-ring-item">
             <RingChart
@@ -923,8 +940,9 @@ export function Panel(props: PanelProps): ReactElement | null {
               cachedInput={main?.cacheReadTokens ?? 0}
               output={main?.outputTokens ?? 0}
               hitRate={mainHitRate}
+              t={t}
             />
-            <span className="smn-ring-caption">主会话</span>
+            <span className="smn-ring-caption">{t('summary.main')}</span>
           </div>
           {narrow
             ? null
@@ -936,8 +954,9 @@ export function Panel(props: PanelProps): ReactElement | null {
                   cachedInput={totals.cacheReadTokens}
                   output={totals.outputTokens}
                   hitRate={cacheHitRate}
+                  t={t}
                 />
-                <span className="smn-ring-caption">子代理</span>
+                <span className="smn-ring-caption">{t('summary.subagents')}</span>
               </div>
             )}
         </div>
@@ -946,9 +965,9 @@ export function Panel(props: PanelProps): ReactElement | null {
         ? null
         : (
           <div className="smn-chart">
-            {statusBar(running, 'smn-bar-running', '运行')}
-            {statusBar(done, 'smn-bar-ok', '完成')}
-            {statusBar(failed, 'smn-bar-err', '异常')}
+            {statusBar(running, 'smn-bar-running', t('summary.running'))}
+            {statusBar(done, 'smn-bar-ok', t('summary.done'))}
+            {statusBar(failed, 'smn-bar-err', t('summary.failed'))}
           </div>
         )}
     </div>
@@ -965,7 +984,7 @@ export function Panel(props: PanelProps): ReactElement | null {
   const rowsEl = visible.length === 0
     ? (
       <div className="smn-empty">
-        {sessionId === undefined ? '尚未选择会话' : '本会话暂无子代理活动'}
+        {sessionId === undefined ? t('rows.empty.noSession') : t('rows.empty.noActivity')}
       </div>
     )
     : (
@@ -975,7 +994,7 @@ export function Panel(props: PanelProps): ReactElement | null {
           const elapsed = row.status === 'running'
             ? fmtDuration(row.startedAt, state.now)
             : fmtDuration(row.startedAt, row.endedAt)
-          const modeText = row.mode === 'continuable' ? '连续对话' : row.mode === 'one-shot' ? '一次性' : ''
+          const modeText = row.mode === 'continuable' ? t('row.mode.continuable') : row.mode === 'one-shot' ? t('row.mode.oneShot') : ''
           const metaLine = [row.provider, modeText, shortId(row.id)]
             .filter(value => typeof value === 'string' && value !== '')
             .join(' · ')
@@ -985,7 +1004,7 @@ export function Panel(props: PanelProps): ReactElement | null {
           // (a real button for keyboard and screen-reader parity) and only the
           // dot, the label and the elapsed time survive.
           if (narrow) {
-            const summaryTitle = `${rowLabel(row)} · ${meta.label} · ${elapsed}`
+            const summaryTitle = `${rowLabel(row, t)} · ${t(meta.label)} · ${elapsed}`
               + (metaLine !== '' ? ` · ${metaLine}` : '')
             return canOpen
               ? (
@@ -993,12 +1012,12 @@ export function Panel(props: PanelProps): ReactElement | null {
                   key={row.id}
                   className="smn-row smn-row-compact smn-row-clickable"
                   type="button"
-                  title={`${summaryTitle}（点击打开对话）`}
+                  title={t('row.openHint', { summary: summaryTitle })}
                   onClick={() => openChild(row)}
                 >
                   <div className="smn-row-main">
                     <StatusDot status={row.status} />
-                    <span className="smn-row-label">{rowLabel(row)}</span>
+                    <span className="smn-row-label">{rowLabel(row, t)}</span>
                   </div>
                   <span className="smn-row-time">{elapsed}</span>
                 </button>
@@ -1007,7 +1026,7 @@ export function Panel(props: PanelProps): ReactElement | null {
                 <div key={row.id} className="smn-row smn-row-compact" title={summaryTitle}>
                   <div className="smn-row-main">
                     <StatusDot status={row.status} />
-                    <span className="smn-row-label">{rowLabel(row)}</span>
+                    <span className="smn-row-label">{rowLabel(row, t)}</span>
                   </div>
                   <span className="smn-row-time">{elapsed}</span>
                 </div>
@@ -1017,11 +1036,11 @@ export function Panel(props: PanelProps): ReactElement | null {
             <div key={row.id} className="smn-row">
               <div className="smn-row-main">
                 <StatusDot status={row.status} />
-                <span className="smn-row-label" title={rowLabel(row)}>{rowLabel(row)}</span>
+                <span className="smn-row-label" title={rowLabel(row, t)}>{rowLabel(row, t)}</span>
                 {canOpen
                   ? (
                     <button className="smn-btn smn-row-open" type="button" onClick={() => openChild(row)}>
-                      打开对话
+                      {t('row.open')}
                     </button>
                   )
                   : null}
@@ -1029,16 +1048,16 @@ export function Panel(props: PanelProps): ReactElement | null {
               <div className="smn-row-foot">
                 <span className="smn-row-meta">{metaLine !== '' ? metaLine : '\u00A0'}</span>
                 <span className="smn-row-time">
-                  {row.status === 'running' ? `${elapsed} · ${meta.label}` : `${meta.label} · ${elapsed}`}
+                  {row.status === 'running' ? `${elapsed} · ${t(meta.label)}` : `${t(meta.label)} · ${elapsed}`}
                 </span>
               </div>
               {row.usage !== undefined
                 ? (
                   <div className="smn-row-usage">
                     <span>↑{fmtTokens(row.usage.inputTokens)} ↓{fmtTokens(row.usage.outputTokens)}</span>
-                    <span>缓存 {usageHitRate(row.usage)}</span>
-                    <span>上下文 {fmtTokens(row.usage.contextTokens)}</span>
-                    {usageUtilization(row.usage) !== '' ? <span>窗口 {usageUtilization(row.usage)}</span> : null}
+                    <span>{t('row.usage.cache')} {usageHitRate(row.usage)}</span>
+                    <span>{t('row.usage.context')} {fmtTokens(row.usage.contextTokens)}</span>
+                    {usageUtilization(row.usage) !== '' ? <span>{t('row.usage.window')} {usageUtilization(row.usage)}</span> : null}
                   </div>
                 )
                 : null}
@@ -1058,13 +1077,13 @@ export function Panel(props: PanelProps): ReactElement | null {
 
   // Narrow footer: the counts compress to a slash-separated triple (which also
   // stands in for the dropped histogram) and the two maintenance buttons become
-  // icons on a second line.
+  // icons on a second line. Both layouts read their copy from the dictionary.
   const footer = narrow
     ? (
       <div className="smn-panel-footer smn-panel-footer--narrow">
         <span
           className="smn-panel-stats"
-          title={`运行 ${running} · 完成 ${done} · 异常 ${failed}`}
+          title={t('footer.stats', { running, done, failed })}
         >
           <b className="smn-stat-running">{running}</b>
           <span className="smn-stat-sep">/</span>
@@ -1078,44 +1097,43 @@ export function Panel(props: PanelProps): ReactElement | null {
             <button
               className="smn-btn smn-icon-btn"
               type="button"
-              title={`显示已隐藏 ${monitor.hidden.length}`}
-              aria-label={`显示已隐藏 ${monitor.hidden.length}`}
+              title={t('footer.showHidden', { count: monitor.hidden.length })}
+              aria-label={t('footer.showHidden', { count: monitor.hidden.length })}
               onClick={() => commit({ hidden: [] })}
             >
-              ⤢
+              \u2924
             </button>
           )
           : null}
         <button
           className="smn-btn smn-icon-btn"
           type="button"
-          title="清空已完成"
-          aria-label="清空已完成"
+          title={t('footer.clearDone')}
+          aria-label={t('footer.clearDone')}
           onClick={clearFinished}
         >
-          ⌫
+          \u232b
         </button>
       </div>
     )
     : (
       <div className="smn-panel-footer">
         <span className="smn-panel-stats">
-          {`运行 ${running} · 完成 ${done} · 异常 ${failed}`}
+          {t('footer.stats', { running, done, failed })}
         </span>
         <span className="smn-panel-spacer" />
         {monitor.hidden.length > 0
           ? (
             <button className="smn-btn" type="button" onClick={() => commit({ hidden: [] })}>
-              {`显示已隐藏 ${monitor.hidden.length}`}
+              {t('footer.showHidden', { count: monitor.hidden.length })}
             </button>
           )
           : null}
         <button className="smn-btn" type="button" onClick={clearFinished}>
-          清空已完成
+          {t('footer.clearDone')}
         </button>
       </div>
     )
-
   return (
     <div className={panelClass} style={style} ref={panelRef}>
       {header}
@@ -1126,7 +1144,7 @@ export function Panel(props: PanelProps): ReactElement | null {
       {footer}
       <div
         className="smn-grip-h"
-        title="拖动调整高度 · 双击复位"
+        title={t('panel.resizeGrip.title')}
         aria-hidden="true"
         onPointerDown={onResizeGripDown}
         onDoubleClick={resetHeight}

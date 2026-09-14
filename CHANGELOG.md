@@ -3,6 +3,12 @@
 本文件记录 `@leetoners/dsh-ui-subagent-monitor` 所有值得记录的变更。
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### Added
+
+- 面板文案国际化：全部界面文字抽进 `src/client/locales.ts` 的中 / 英字典（键集以 `zh` 为准，`en` 由编译器校验逐键齐全），面板跟随宿主 UI 语言（设置 → 通用 → 语言）实时切换。语言取自宿主 locale 服务的活动语言；该服务**不进 `inject`**（cordis 的 inject 是硬依赖），而是用 `ctx.inject(['locale'], …)` 嵌套装载——未组合 locale 插件的宿主照常拿到面板。宿主未给出语言、或该语言无对应文案时回退中文（地区变体按主子标签归并，`en-US` 读英文），现有用户所见不变。
+
 ## [0.4.1] - 2026-09-14
 
 ### Fixed
