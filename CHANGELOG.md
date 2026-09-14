@@ -3,11 +3,12 @@
 本文件记录 `@leetoners/dsh-ui-subagent-monitor` 所有值得记录的变更。
 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [0.5.0] - 2026-09-14
 
 ### Added
 
-- 面板文案国际化：全部界面文字抽进 `src/client/locales.ts` 的中 / 英字典（键集以 `zh` 为准，`en` 由编译器校验逐键齐全），面板跟随宿主 UI 语言（设置 → 通用 → 语言）实时切换。语言取自宿主 locale 服务的活动语言；该服务**不进 `inject`**（cordis 的 inject 是硬依赖），而是用 `ctx.inject(['locale'], …)` 嵌套装载——未组合 locale 插件的宿主照常拿到面板。宿主未给出语言、或该语言无对应文案时回退中文（地区变体按主子标签归并，`en-US` 读英文），现有用户所见不变。
+- 面板文案国际化（[#2](https://github.com/Mombrane/dsh-subagent-monitor/issues/2)，贡献者 [@dhanjit](https://github.com/dhanjit) 的 PR [#3](https://github.com/Mombrane/dsh-subagent-monitor/pull/3)）：全部界面文字抽进 `src/client/locales.ts` 的中 / 英字典（键集以 `zh` 为准，`en` 由编译器校验逐键齐全），面板跟随宿主 UI 语言（设置 → 通用 → 语言）实时切换。语言取自宿主 locale 服务的活动语言；该服务**不进 `inject`**（cordis 的 inject 是硬依赖），而是用 `ctx.inject(['locale'], …)` 嵌套装载——未组合 locale 插件的宿主照常拿到面板。宿主未给出语言、或该语言无对应文案时回退中文（地区变体按主子标签归并，`en-US` 读英文），现有用户所见不变。
+- 窄栏（横向收起）的文案一并接入同一套字典，新增 8 个键：`panel.narrow.title` / `panel.narrow.aria` / `panel.narrowExpand.title` / `panel.narrowExpand.aria` / `panel.collapse.aria.collapse` / `panel.collapse.aria.expand` / `panel.close.aria` / `row.openHint`（中英双语齐备），因此窄栏在英文宿主下同样是英文。
 
 ## [0.4.1] - 2026-09-14
 

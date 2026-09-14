@@ -97,7 +97,7 @@
 dsh plugin --profile <your-profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
-> ✅ 已发布 `v0.4.1`（GitHub Actions 构建并签名，SLSA provenance 可验）。
+> ✅ 已发布 `v0.5.0`（GitHub Actions 构建并签名，SLSA provenance 可验）。
 
 ### 方式 B · GitHub 直装
 
@@ -177,7 +177,7 @@ DSH STORE 的自动复查只认 `package.json` 中**完整 SemVer 的逐版本�
 
 ## 📋 变更日志
 
-完整变更历史见 [CHANGELOG.md](./CHANGELOG.md)。当前版本 **0.4.1**（与 `package.json` 对齐）。
+完整变更历史见 [CHANGELOG.md](./CHANGELOG.md)。当前版本 **0.5.0**（与 `package.json` 对齐）。
 
 ## 📖 架构文档
 

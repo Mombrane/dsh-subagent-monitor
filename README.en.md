@@ -97,7 +97,7 @@ The narrow strip after a horizontal collapse (120px, two rings at full size):
 dsh plugin --profile <your-profile> add @leetoners/dsh-ui-subagent-monitor
 ```
 
-> ✅ Published as `v0.4.1` (built and signed by GitHub Actions; SLSA provenance verifiable).
+> ✅ Published as `v0.5.0` (built and signed by GitHub Actions; SLSA provenance verifiable).
 
 ### Option B · Install from GitHub
 
@@ -177,7 +177,7 @@ The `compatible` marks above are not inferred — they were measured on **dispos
 
 ## 📋 Changelog
 
-See [CHANGELOG.md](./CHANGELOG.md) for the full history. Current version **0.4.1** (aligned with `package.json`).
+See [CHANGELOG.md](./CHANGELOG.md) for the full history. Current version **0.5.0** (aligned with `package.json`).
 
 ## 📖 Architecture
 
