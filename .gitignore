@@ -1,3 +1,7 @@
 node_modules/
 *.tsbuildinfo
 .DS_Store
+# This repo publishes with npm (.github/workflows/publish.yml); pnpm is only ever
+# used inside DSH profile directories, so its lockfile/workspace file are not ours.
+pnpm-lock.yaml
+pnpm-workspace.yaml
